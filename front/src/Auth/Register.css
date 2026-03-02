@@ -1,0 +1,332 @@
+:root {
+  --verde-principal: #2d5016;
+  --verde-medio: #4a7c59;
+  --verde-claro: #7fb069;
+  --arena: #dcc2a4;
+  --crema: #fffdf8;
+  --error: #dc3545;
+  --success: #28a745;
+}
+
+/* Reset básico */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--crema);
+  color: #333;
+}
+
+/* Layout principal */
+.register-page {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Lado izquierdo: formulario */
+.register-left {
+  max-width: 480px;
+  width: 100%;
+  background: #f6fbf4;
+  border-right: 2px solid rgba(74,124,89,.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto; /* Permitir scroll si el contenido es muy largo */
+}
+
+/* Tarjeta del formulario */
+.auth-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin: 0 auto;
+  width: 100%;
+}
+
+.auth-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--verde-medio);
+}
+
+.register-logo {
+  width: 230px;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 15px;
+}
+
+/* Inputs */
+.auth-form .form-control {
+  border: 2px solid #e4e9e4;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.auth-form .form-control:focus {
+  border-color: var(--verde-claro);
+  box-shadow: 0 0 0 .2rem rgba(127,176,105,.15);
+  outline: none;
+}
+.auth-form .is-invalid {
+  border-color: var(--error) !important;
+}
+.invalid-feedback {
+  font-size: 0.85rem;
+  color: var(--error);
+  margin-top: 4px;
+}
+
+/* Botón de registro */
+.btn-success {
+  background: var(--verde-medio);
+  border: none;
+  padding: 0.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+.btn-success:hover {
+  background: var(--verde-principal);
+}
+.btn-success:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Botón de login (outline) */
+.btn-outline-success {
+  background: transparent;
+  border: 2px solid var(--verde-medio);
+  color: var(--verde-medio);
+  padding: 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+.btn-outline-success:hover {
+  background: var(--verde-medio);
+  color: #fff;
+  border-color: var(--verde-medio);
+  text-decoration: none;
+}
+
+/* Mensajes */
+.alert {
+  border-radius: 12px;
+  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+}
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.alert-danger {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Banner inferior */
+.cta-banner {
+  background: #f3e4cf;
+  border: 2px solid #b58f6a;
+  color: #4b3f33;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: .9rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+.cta-banner a { 
+  color: #137f4a; 
+  text-decoration: none; 
+  font-weight: 600;
+}
+.cta-banner a:hover { 
+  text-decoration: underline; 
+}
+
+/* Lado derecho: imagen */
+.register-right {
+  flex-grow: 1;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Recuperacion de contraseña */
+.forgot-password {
+  display: flex;
+  text-align: center;
+
+  margin-top: -5px;
+}
+
+.forgot-link {
+  font-size: 0.9rem;
+  color: var(--verde-medio) !important;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot-link span {
+  font-weight: 600;
+}
+
+.forgot-link:hover {
+  color: var(--verde-principal) !important;
+  text-decoration: underline;
+}
+/* Responsive */
+@media (max-width: 992px) {
+  .register-right { 
+    display: none; 
+  }
+  
+  .register-left {
+    max-width: 100%;
+    border-right: none;
+    padding: 1.5rem;
+  }
+  
+  .auth-card {
+    padding: 1.5rem;
+  }
+  
+  .register-logo {
+    width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-page {
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .register-left {
+    padding: 1rem;
+    justify-content: flex-start;
+    padding-top: 2rem;
+  }
+  
+  .auth-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+  
+  .auth-title {
+    font-size: 20px;
+  }
+  
+  .register-logo {
+    width: 160px;
+    margin-bottom: 10px;
+  }
+  
+  .auth-form .form-control {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.95rem;
+  }
+  
+  .btn-success {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+  
+  .btn-outline-success {
+    padding: 0.65rem;
+    font-size: 0.9rem;
+  }
+  
+  .cta-banner {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-left {
+    padding: 0.75rem;
+    padding-top: 1.5rem;
+  }
+  
+  .auth-card {
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  
+  .auth-title {
+    font-size: 18px;
+  }
+  
+  .register-logo {
+    width: 140px;
+    margin-bottom: 8px;
+  }
+  
+  .auth-form .form-control {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+  
+  .btn-success {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+  
+  .btn-outline-success {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+    border-radius: 10px;
+  }
+  
+  .cta-banner {
+    font-size: 0.8rem;
+    padding: 7px 10px;
+    border-radius: 12px;
+  }
+  
+  .alert {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.85rem;
+  }
+  
+  .forgot-link {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .register-left {
+    padding: 0.5rem;
+  }
+  
+  .auth-card {
+    padding: 0.85rem;
+  }
+  
+  .register-logo {
+    width: 120px;
+  }
+  
+  .auth-title {
+    font-size: 16px;
+  }
+}

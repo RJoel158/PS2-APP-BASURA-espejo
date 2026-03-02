@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.user-info-container {
+  min-height: 100vh;
+  background-color: #f5f0e6; 
+   font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+.header {
+  width: 100%;
+  height: 90px; 
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-image: url("../../assets/Cardboard.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 0 1rem;
+  color: white;
+}
+
+
+.logo-img {
+  max-width: 150px !important;
+  height: auto;
+}
+
+
+.header-title {
+  font-weight: 700;
+  font-size: 1.9rem;
+  margin: 0;
+}
+
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    height: auto;
+    gap: 10px;
+    padding: 0.5rem 1rem;
+  }
+
+  .header-title {
+    font-size: 1.25rem;
+  }
+
+  .logo-img {
+    max-width: 120px;
+  }
+}
+
+
+
+.user-info-wrapper {
+  background-color: #F5F5DC; 
+  border-radius: 10px;
+  width: 95%;
+  max-width: 550px;
+  margin: 20px 0;
+  padding: 30px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+.user-title{
+  color: #4C7C5B;
+  font-weight: 650;
+}
+
+.user-info-card {
+  
+ 
+  width: 100%;
+  max-width: 500px;
+  padding: 30px;
+  text-align: center;
+ 
+}
+
+
+.user-avatar-large {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  
+}
+
+.user-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.role-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: normal;
+  font-size: 14px;
+}
+
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #555;
+}
+
+.form-input {
+  padding: 12px 15px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  background: #f9f9f9;
+  color: #666;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+
+.btn-close-session {
+  background-color:#FF5F57 !important ;
+  color: white !important;
+  border: none;
+  border-radius: 25px;
+  font-weight: bold;
+  padding: 10px 10px !important;
+  cursor: pointer;
+}
+
+
+.btn-back {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+/* Spinner de carga */
+.spinner-border {
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  vertical-align: text-bottom;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+.text-success {
+  color: #4CAF50 !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-container {
+  text-align: center;
+  padding: 3rem;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: #666;
+}

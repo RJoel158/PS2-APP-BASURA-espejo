@@ -1,0 +1,1154 @@
+//pickupInfo
+import React, { useEffect, useState } from 'react';
+import { apiUrl } from '../../config/environment';
+import {
+  APPOINTMENT_STATE,
+  getRequestStateLabel,
+  getAppointmentStateLabel
+} from '../../shared/constants';
+import './PickupDetails.css';
+import LargeImageCarousel from './LargeImageCarousel';
+import RatingModal from '../RatingModalComp/RatingModal';
+import ComplaintModal from '../ComplaintModalComp/ComplaintModal';
+import CheckModal from '../CommonComp/CheckModal';
+import ConfirmModal from '../CommonComp/ConfirmModal';
+import SuccessModal from '../CommonComp/SuccesModal';
+import { checkUserRated } from '../../services/scoreService';
+
+interface PickupInfoProps {
+  requestId?: string;
+  appointmentId?: string | null;
+  onCancel: () => void;
+  onLocationUpdate?: (lat: number, lng: number) => void;
+}
+
+interface RequestData {
+  id: number;
+  description: string;
+  materialName?: string;
+  userName?: string;
+  userId?: number; // <-- fix: add userId for owner
+  registerDate: string;
+  state: number;
+  latitude?: number;
+  longitude?: number;
+  images?: any[];
+}
+
+interface AppointmentData {
+  id: number;
+  idRequest: number;
+  acceptedDate: string;
+  acceptedHour: string;
+  state: number;
+  description: string;
+  materialName?: string;
+  collectorName?: string;
+  collectorPhone?: string;
+  collectorEmail?: string;
+  collectorCompanyName?: string;
+  collectorNit?: string;
+  recyclerName?: string;
+  recyclerPhone?: string;
+  recyclerEmail?: string;
+  recyclerCompanyName?: string;
+  recyclerNit?: string;
+  collectorId?: number;
+  recyclerId?: number;
+}
+
+const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCancel, onLocationUpdate }) => {
+  const [requestData, setRequestData] = useState<RequestData | null>(null);
+  const [appointmentData, setAppointmentData] = useState<AppointmentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [, setHasRated] = useState(false);
+  const [hasComplained, setHasComplained] = useState(false);
+  const [deleting, setDeleting] = useState(false); // <-- move here, above all logic
+  const [showRejectCheckModal, setShowRejectCheckModal] = useState(false);
+  const [showRejectSuccessModal, setShowRejectSuccessModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [showAcceptConfirmModal, setShowAcceptConfirmModal] = useState(false);
+  const [showCompleteCheckModal, setShowCompleteCheckModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [shouldReloadOnSuccessClose, setShouldReloadOnSuccessClose] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+
+  // Obtener el usuario actual desde localStorage
+  const getCurrentUser = () => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  };
+
+  // Verificar si el usuario actual es el reciclador (dueño de la request)
+  // Verificar si el usuario actual es el reciclador (dueño de la request)
+  const isRecyclerRequestOwner = () => {
+    const currentUser = getCurrentUser();
+    return currentUser && requestData && currentUser.id === requestData.userId;
+  };
+
+  // Verificar si el usuario actual es el reciclador (de la cita)
+  const isRecycler = () => {
+    const currentUser = getCurrentUser();
+    return currentUser && appointmentData && currentUser.id === appointmentData.recyclerId;
+  };
+
+  // Verificar si el usuario actual es el recolector (quien aceptó la request)
+  const isCollector = () => {
+    const currentUser = getCurrentUser();
+    return currentUser && appointmentData && currentUser.id === appointmentData.collectorId;
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!requestId) {
+        setError('ID de solicitud no proporcionado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // Si hay appointmentId, cargar datos del appointment
+        if (appointmentId) {
+          // Cargar datos del appointment que incluyen info de la request
+          const appointmentResponse = await fetch(apiUrl(`/api/appointments/${appointmentId}`));
+
+          if (!appointmentResponse.ok) {
+            throw new Error(`Error ${appointmentResponse.status}: ${appointmentResponse.statusText}`);
+          }
+
+          const appointmentResult = await appointmentResponse.json();
+          if (appointmentResult.success) {
+            setAppointmentData(appointmentResult.data);
+            // También cargar los datos básicos de la request
+            const requestResponse = await fetch(apiUrl(`/api/request/${requestId}`));
+            if (requestResponse.ok) {
+              const requestResult = await requestResponse.json();
+              if (requestResult.success) {
+                // Mapear idUser a userId para compatibilidad con el frontend
+                const reqData = requestResult.data;
+                if (reqData && reqData.idUser) {
+                  reqData.userId = reqData.idUser;
+                }
+                setRequestData(reqData);
+              }
+            }
+          } else {
+            throw new Error('No se pudieron cargar los datos de la cita');
+          }
+        } else {
+          // Solo cargar datos de la request
+          const response = await fetch(apiUrl(`/api/request/${requestId}`));
+
+          if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            // Mapear idUser a userId para compatibilidad con el frontend
+            const reqData = data.data;
+            if (reqData && reqData.idUser) {
+              reqData.userId = reqData.idUser;
+            }
+            setRequestData(reqData);
+          } else {
+            throw new Error('No se pudieron cargar los datos de la solicitud');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Error al cargar los datos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [requestId, appointmentId]);
+
+  // Actualizar ubicación cuando se carguen los datos del request
+  useEffect(() => {
+    if (requestData) {
+      console.log('RequestData loaded:', requestData);
+      console.log('Images array:', requestData.images);
+      if (requestData.images && requestData.images.length > 0) {
+        console.log('First image object:', requestData.images[0]);
+        console.log('Image field:', requestData.images[0].image);
+        console.log('apiUrl(""):', apiUrl(''));
+        console.log('Final image URL:', `${apiUrl('')}${requestData.images[0].image}`);
+
+        // Verificar si existe el archivo
+        fetch(`${apiUrl('')}${requestData.images[0].image}`, { method: 'HEAD' })
+          .then(response => {
+            console.log('Image exists check:', response.status, response.statusText);
+          })
+          .catch(error => {
+            console.error('Error checking image existence:', error);
+          });
+      }
+      if (requestData.latitude && requestData.longitude && onLocationUpdate) {
+        onLocationUpdate(requestData.latitude, requestData.longitude);
+      }
+    }
+  }, [requestData, onLocationUpdate]);
+
+  // Verificar si el usuario debe calificar/reclamar cuando se carga una cita
+  useEffect(() => {
+    const checkRatingAndComplaintStatus = async () => {
+      if (appointmentData && appointmentId) {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const alreadyRated = await checkUserRated(Number(appointmentId), user.id);
+          
+          // Si la cita está COMPLETADA
+          if (appointmentData.state === APPOINTMENT_STATE.COMPLETED) {
+            setHasRated(alreadyRated);
+            // Si NO ha calificado, mostrar el modal de calificación
+            if (!alreadyRated) {
+              setShowRatingModal(true);
+            }
+          }
+          
+          // Si la cita está CANCELADA
+          if (appointmentData.state === APPOINTMENT_STATE.CANCELLED) {
+            setHasComplained(alreadyRated);
+            
+            // Verificar si este usuario fue quien canceló la cita
+            const cancelledKey = `cancelled_${appointmentId}_${user.id}`;
+            const wasCancelledByMe = sessionStorage.getItem(cancelledKey) === 'true';
+            
+            // Solo mostrar modal si:
+            // 1. No ha reclamado antes
+            // 2. NO fue quien canceló la cita
+            if (!alreadyRated && !wasCancelledByMe) {
+              setShowComplaintModal(true);
+            }
+          }
+        }
+      }
+    };
+
+    checkRatingAndComplaintStatus();
+  }, [appointmentData, appointmentId]);
+
+  const handleCancelAppointment = async () => {
+    if (!appointmentId) {
+      setErrorModalMessage('No se puede cancelar: ID de cita no disponible');
+      setShowErrorModal(true);
+      return;
+    }
+    if (!appointmentData) {
+      setErrorModalMessage('No se puede cancelar: Datos de la cita no disponibles');
+      setShowErrorModal(true);
+      return;
+    }
+
+    // Mostrar modal de confirmación
+    setShowCancelConfirmModal(true);
+  };
+
+  // Función que se ejecuta cuando se confirma la cancelación
+  const confirmCancelAppointment = async () => {
+    setShowCancelConfirmModal(false);
+    if (!appointmentId || !appointmentData) return;
+
+    setCancelling(true);
+
+    try {
+      console.log('[INFO] Iniciando cancelación, appointmentId=', appointmentId, 'appointmentData=', appointmentData);
+
+      // Obtener el usuario actual (quien está cancelando)
+      const currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.id) {
+        setErrorModalMessage('Error: No se pudo identificar al usuario actual');
+        setShowErrorModal(true);
+        setCancelling(false);
+        return;
+      }
+      
+      const userId = currentUser.id;
+      console.log('[INFO] Usuario que cancela:', userId, 'appointmentData:', appointmentData);
+
+      // Si usas token JWT en localStorage/sessionStorage:
+      const token = localStorage.getItem('token'); // o donde lo guardes
+
+      const url = apiUrl(`/api/appointments/${appointmentId}/cancel`);
+      console.log('[INFO] PUT ->', url, 'payload=', { userId, userRole: 'collector' });
+
+      const response = await fetch(url, {
+        method: 'PUT', // <- Cambio a PUT para coincidir con backend
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          // Ajusta nombres de campo si el backend usa snake_case o distintos nombres
+          userId,
+          userRole: 'collector'
+        })
+      });
+
+      // Manejo seguro del body aunque no sea JSON
+      const text = await response.text();
+      let result: any = null;
+      try {
+        result = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // respuesta no JSON
+        result = { success: response.ok, raw: text };
+      }
+
+      console.log('[INFO] Response status:', response.status, 'parsed:', result);
+      console.log('[DEBUG] Full response object:', { 
+        ok: response.ok, 
+        status: response.status, 
+        statusText: response.statusText,
+        result 
+      });
+
+      if (!response.ok) {
+        // Extrae mensaje de error si existe
+        const msg = result?.error || result?.message || result?.raw || `Error ${response.status}: ${response.statusText}`;
+        console.error('[ERROR] Backend returned error:', msg);
+        throw new Error(msg);
+      }
+
+      // Aquí suponemos que result.success indica éxito
+      if (result && (result.success === true || response.status === 200 || response.status === 204)) {
+        console.log('[SUCCESS] Appointment cancelled successfully');
+        
+        // Marcar que este usuario canceló esta cita (para no mostrarle el modal de reclamo)
+        const currentUser = getCurrentUser();
+        if (currentUser && appointmentId) {
+          const cancelledKey = `cancelled_${appointmentId}_${currentUser.id}`;
+          sessionStorage.setItem(cancelledKey, 'true');
+          console.log('[INFO] Marked as cancelled by user:', currentUser.id);
+        }
+        
+        // Actualiza estado local para reflejar la cancelación
+        setAppointmentData(prev => prev ? { ...prev, state: APPOINTMENT_STATE.CANCELLED } : prev);
+        
+        // Mostrar modal de éxito
+        setSuccessMessage({
+          title: ' Cita Cancelada',
+          message: 'La cita ha sido cancelada exitosamente.\n\nLa solicitud estará disponible nuevamente en el mapa.'
+        });
+        setShowSuccessModal(true);
+        setShouldReloadOnSuccessClose(true);
+      } else {
+        const msg = result?.error || result?.message || 'El servidor respondió sin confirmar la cancelación';
+        console.error('[ERROR] Unexpected response:', { result, status: response.status });
+        throw new Error(msg);
+      }
+    } catch (err) {
+      console.error('[ERROR] Error cancelling appointment:', err);
+      setErrorModalMessage(`Error al cancelar la cita:\n\n${err instanceof Error ? err.message : JSON.stringify(err)}`);
+      setShowErrorModal(true);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // Función para aceptar un appointment (mostrar confirmación)
+  const handleAcceptAppointment = async () => {
+    if (!appointmentId || !appointmentData) {
+      setErrorModalMessage('No se puede aceptar: ID de cita no disponible');
+      setShowErrorModal(true);
+      return;
+    }
+
+    // Mostrar modal de confirmación
+    setShowAcceptConfirmModal(true);
+  };
+
+  // Función que se ejecuta cuando se confirma aceptar la cita
+  const confirmAcceptAppointment = async () => {
+    setShowAcceptConfirmModal(false);
+    if (!appointmentId || !appointmentData) return;
+
+    setAccepting(true);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userId = user?.id || appointmentData.recyclerId;
+
+      const url = apiUrl(`/api/appointments/${appointmentId}/accept`);
+      console.log('[INFO] PUT ->', url);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const result = await response.json();
+      console.log('[INFO] Accept response:', result);
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Error ${response.status}`);
+      }
+
+      if (result.success) {
+        console.log('[SUCCESS] Appointment accepted successfully');
+        
+        // Mostrar modal de éxito con mensaje mejorado
+        setSuccessMessage({
+          title: 'Solicitud Aceptada',
+          message: '¡Has aceptado la solicitud exitosamente!\n\nEl usuario ha sido notificado y podrás coordinar los detalles de la recolección.'
+        });
+        setShowSuccessModal(true);
+        setShouldReloadOnSuccessClose(true); 
+        
+        setAppointmentData(prev => prev ? { ...prev, state: APPOINTMENT_STATE.ACCEPTED } : prev);
+        
+        
+      } else {
+        throw new Error(result.error || 'Error al aceptar la cita');
+      }
+    } catch (err) {
+      console.error('[ERROR] Error accepting appointment:', err);
+      setErrorModalMessage(`Error al aceptar la cita:\n\n${err instanceof Error ? err.message : JSON.stringify(err)}`);
+      setShowErrorModal(true);
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  // Función para rechazar un appointment
+  const handleRejectAppointment = async () => {
+    if (!appointmentId || !appointmentData) {
+      setErrorModalMessage('No se puede rechazar: ID de cita no disponible');
+      setShowErrorModal(true);
+      return;
+    }
+
+    // Mostrar modal de confirmación
+    setShowRejectCheckModal(true);
+  };
+
+  // Función que se ejecuta cuando se confirma el rechazo
+  const confirmRejectAppointment = async () => {
+    setShowRejectCheckModal(false);
+    setRejecting(true);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userId = user?.id || appointmentData?.recyclerId;
+
+      const url = apiUrl(`/api/appointments/${appointmentId}/reject`);
+      console.log('[INFO] PUT ->', url);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const result = await response.json();
+      console.log('[INFO] Reject response:', result);
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Error ${response.status}`);
+      }
+
+      if (result.success) {
+        setAppointmentData(prev => prev ? { ...prev, state: APPOINTMENT_STATE.REJECTED } : prev);
+        setShowRejectSuccessModal(true);
+      } else {
+        throw new Error(result.error || 'Error al rechazar la cita');
+      }
+    } catch (err) {
+      console.error('[ERROR] Error rejecting appointment:', err);
+      setErrorModalMessage(`Error al rechazar la cita:\n\n${err instanceof Error ? err.message : JSON.stringify(err)}`);
+      setShowErrorModal(true);
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  // Función para completar un appointment
+  const handleCompleteAppointment = async () => {
+    if (!appointmentId || !appointmentData) {
+      setErrorModalMessage('No se puede completar: ID de cita no disponible');
+      setShowErrorModal(true);
+      return;
+    }
+
+    // Mostrar modal de confirmación
+    setShowCompleteCheckModal(true);
+  };
+
+  // Función que se ejecuta cuando se confirma completar la cita
+  const confirmCompleteAppointment = async () => {
+    setShowCompleteCheckModal(false);
+    if (!appointmentId || !appointmentData) return;
+
+    setCompleting(true);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userId = user?.id || appointmentData.collectorId || appointmentData.recyclerId;
+
+      const url = apiUrl(`/api/appointments/${appointmentId}/complete`);
+      console.log('[INFO] PUT ->', url);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      const result = await response.json();
+      console.log('[INFO] Complete response:', result);
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Error ${response.status}`);
+      }
+
+      if (result.success) {
+        
+        setAppointmentData(prev => prev ? { ...prev, state: APPOINTMENT_STATE.COMPLETED } : prev);
+        
+        // Señalizar que se completó una cita para refrescar el historial
+        localStorage.setItem('appointmentCompleted', Date.now().toString());
+        
+        // Verificar si el usuario ya calificó y mostrar modal de calificación directamente
+        if (user?.id) {
+          const alreadyRated = await checkUserRated(Number(appointmentId), user.id);
+          if (!alreadyRated) {
+            setShowRatingModal(true);
+          }
+        }
+
+      } else {
+        throw new Error(result.error || 'Error al completar la cita');
+      }
+    } catch (err) {
+      console.error('[ERROR] Error completing appointment:', err);
+      setErrorModalMessage(`Error al completar la cita:\n\n${err instanceof Error ? err.message : JSON.stringify(err)}`);
+      setShowErrorModal(true);
+    } finally {
+      setCompleting(false);
+    }
+  };
+  const handleRatingModalClose = () => {
+    setShowRatingModal(false);
+    onCancel();
+  };
+  
+  const handleRatingSuccess = () => {
+    setHasRated(true);
+    setShowRatingModal(false);
+    
+    window.location.reload();
+  };
+
+  const handleComplaintModalClose = () => {
+    setShowComplaintModal(false);
+    // No cerrar el PickupInfo, solo el modal de reclamo
+  };
+
+  const handleComplaintSuccess = () => {
+    setHasComplained(true);
+    setShowComplaintModal(false);
+  };
+
+  const handleOpenComplaintModal = () => {
+    setShowComplaintModal(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="pickupdetail-pickup-container">
+        <div className="loading">Cargando detalles...</div>
+      </div>
+    );
+  }
+
+  if (error || (!requestData && !appointmentData)) {
+    return (
+      <div className="pickupdetail-pickup-container">
+        <div className="error">Error: {error || 'No se encontraron los datos'}</div>
+      </div>
+    );
+  }
+
+  // Determinar qué datos mostrar
+  const isAppointmentView = appointmentData !== null;
+  const displayData = isAppointmentView ? appointmentData : requestData;
+
+  // Eliminar lógico de la request
+  const handleDeleteRequest = async () => {
+    if (!requestData) return;
+    // Mostrar modal de confirmación
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Función que se ejecuta cuando se confirma la eliminación
+  const confirmDeleteRequest = async () => {
+    setShowDeleteConfirmModal(false);
+    if (!requestData) return;
+    
+    setDeleting(true);
+    try {
+      const response = await fetch(apiUrl(`/api/request/${requestData.id}/state`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: 4 }) // 4 = Eliminado lógico
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccessMessage({
+          title: ' Solicitud Eliminada',
+          message: 'La solicitud ha sido eliminada correctamente.'
+        });
+        setShowSuccessModal(true);
+        setShouldReloadOnSuccessClose(true);
+      } else {
+        setErrorModalMessage('No se pudo eliminar la solicitud.');
+        setShowErrorModal(true);
+      }
+    } catch (err) {
+      setErrorModalMessage('Error al eliminar la solicitud.');
+      setShowErrorModal(true);
+    } finally {
+      setDeleting(false);
+    }
+  };
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div className="pickupdetail-pickup-container">
+      <h2 className="pickupdetail-pickup-title">
+        {displayData?.materialName ? `Reciclaje de ${displayData.materialName}` : 'Reciclaje de Material'}
+      </h2>
+
+      {/* Imágenes del material - GRANDES */}
+      <LargeImageCarousel
+        images={requestData?.images || []}
+        apiUrl={apiUrl('')}
+      />
+
+      {/* Descripción */}
+      <p className="pickupdetail-pickup-description">
+        {displayData?.description}
+      </p>
+
+      {/* Información de contacto */}
+      <div className="pickupdetail-pickup-grid">
+        {isAppointmentView && appointmentData ? (
+          <>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Fecha de Cita
+              </h3>
+              <p className="pickupdetail-info-value">
+                {formatDate(appointmentData.acceptedDate)}
+              </p>
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Hora
+              </h3>
+              <p className="pickupdetail-info-value">
+                {appointmentData.acceptedHour}
+              </p>
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Recolector
+              </h3>
+              {appointmentData.collectorCompanyName ? (
+                <>
+                  <p className="pickupdetail-info-value">
+                    🏢 {appointmentData.collectorCompanyName}
+                  </p>
+                  {appointmentData.collectorNit && (
+                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                      NIT: {appointmentData.collectorNit}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="pickupdetail-info-value">
+                    {appointmentData.collectorName || 'No asignado'}
+                  </p>
+                  {appointmentData.collectorPhone && (
+                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                      Tel: {appointmentData.collectorPhone}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Reciclador
+              </h3>
+              {appointmentData.recyclerCompanyName ? (
+                <>
+                  <p className="pickupdetail-info-value">
+                    🏢 {appointmentData.recyclerCompanyName}
+                  </p>
+                  {appointmentData.recyclerNit && (
+                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                      NIT: {appointmentData.recyclerNit}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="pickupdetail-info-value">
+                    {appointmentData.recyclerName || 'No asignado'}
+                  </p>
+                  {appointmentData.recyclerPhone && (
+                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                      Tel: {appointmentData.recyclerPhone}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Estado de Cita
+              </h3>
+              <p className="pickupdetail-info-value">
+                {getAppointmentStateLabel(appointmentData.state)}
+              </p>
+            </div>
+          </>
+        ) : requestData ? (
+          <>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Fecha de Solicitud
+              </h3>
+              <p className="pickupdetail-info-value">
+                {formatDate(requestData.registerDate)}
+              </p>
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Solicitante
+              </h3>
+              <p className="pickupdetail-info-value">
+                {requestData.userName || 'Usuario'}
+              </p>
+            </div>
+            <div className="pickupdetail-info-block">
+              <h3 className="pickupdetail-info-label">
+                Estado
+              </h3>
+              <p className="pickupdetail-info-value">
+                {getRequestStateLabel(requestData.state)}
+              </p>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {/* Botones según el estado de la cita */}
+      {isAppointmentView && appointmentData && (
+        <div className="pickupdetail-actions" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+          {/* Botones para estado PENDING (0) - SOLO el Reciclador puede aceptar o rechazar */}
+          {appointmentData.state === APPOINTMENT_STATE.PENDING && isRecycler() && (
+            <>
+              <button
+                onClick={handleAcceptAppointment}
+                className="pickupdetail-accept-button"
+                disabled={accepting}
+                style={{
+                  opacity: accepting ? 0.6 : 1,
+                  cursor: accepting ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {accepting ? 'Aceptando...' : ' Aceptar Solicitud'}
+              </button>
+              <button
+                onClick={handleRejectAppointment}
+                className="pickupdetail-reject-button"
+                disabled={rejecting}
+                style={{
+                  opacity: rejecting ? 0.6 : 1,
+                  cursor: rejecting ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {rejecting ? 'Rechazando...' : '✕ Rechazar Solicitud'}
+              </button>
+            </>
+          )}
+
+          {/* Mensaje informativo para el recolector cuando está en estado PENDING */}
+          {appointmentData.state === APPOINTMENT_STATE.PENDING && isCollector() && (
+            <>
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                color: '#856404',
+                marginBottom: '1rem'
+              }}>
+                <p style={{ margin: 0, fontWeight: 500 }}>
+                  ⏳ <strong>Esperando confirmación del reciclador</strong>
+                </p>
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9em' }}>
+                  Tu solicitud de recolección está pendiente. El reciclador debe aceptarla para continuar.
+                </p>
+              </div>
+              
+              {/* Botón para que el recolector cancele su propia agenda */}
+              <button
+                onClick={handleCancelAppointment}
+                className="pickupdetail-cancel-button"
+                disabled={cancelling}
+                style={{
+                  opacity: cancelling ? 0.6 : 1,
+                  cursor: cancelling ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#ff9800',
+                  color: 'white',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {cancelling ? 'Cancelando...' : '🗑️ Cancelar mi Agenda'}
+              </button>
+            </>
+          )}
+
+          {/* Botones para estado ACCEPTED (1) - Ambos pueden cancelar o completar */}
+          {appointmentData.state === APPOINTMENT_STATE.ACCEPTED && (
+            <>
+              <button
+                onClick={handleCompleteAppointment}
+                className="pickupdetail-complete-button"
+                disabled={completing}
+                style={{
+                  opacity: completing ? 0.6 : 1,
+                  cursor: completing ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#2196F3',
+                  color: 'white',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  fontWeight: 600
+                }}
+              >
+                {completing ? 'Completando...' : ' Marcar como Completado'}
+              </button>
+              <button
+                onClick={handleCancelAppointment}
+                className="pickupdetail-cancel-button"
+                disabled={cancelling}
+                style={{
+                  opacity: cancelling ? 0.6 : 1,
+                  cursor: cancelling ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {cancelling ? 'Cancelando...' : 'Cancelar Recojo'}
+              </button>
+            </>
+          )}
+
+          {/* Mostrar mensaje para estados terminales */}
+          {appointmentData.state === APPOINTMENT_STATE.REJECTED && (
+            <div style={{
+              padding: '0.75rem',
+              backgroundColor: '#ffebee',
+              borderRadius: '0.5rem',
+              color: '#c62828',
+              textAlign: 'center',
+              fontWeight: 500
+            }}>
+              ⚠️ Esta cita fue rechazada
+            </div>
+          )}
+
+          {appointmentData.state === APPOINTMENT_STATE.CANCELLED && (
+            <>
+              <div style={{
+                padding: '0.75rem',
+                backgroundColor: '#fff3e0',
+                borderRadius: '0.5rem',
+                color: '#e65100',
+                textAlign: 'center',
+                fontWeight: 500
+              }}>
+                ⚠️ Esta cita ha sido cancelada
+              </div>
+              
+              {/* Botón sutil para hacer reclamo */}
+              {!hasComplained && (
+                <button
+                  onClick={handleOpenComplaintModal}
+                  style={{
+                    marginTop: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'transparent',
+                    color: '#d32f2f',
+                    border: '1px solid #d32f2f',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#d32f2f';
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#d32f2f';
+                  }}
+                >
+                  📝 Reportar problema
+                </button>
+              )}
+              
+              {hasComplained && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem',
+                  backgroundColor: '#ffebee',
+                  borderRadius: '0.5rem',
+                  color: '#c62828',
+                  textAlign: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 500
+                }}>
+                  Ya has reportado un problema con esta cita
+                </div>
+              )}
+            </>
+          )}
+
+          {appointmentData.state === APPOINTMENT_STATE.COMPLETED && (
+            <div style={{
+              padding: '0.75rem',
+              backgroundColor: '#e8f5e9',
+              borderRadius: '0.5rem',
+              color: '#2e7d32',
+              textAlign: 'center',
+              fontWeight: 500
+            }}>
+               Esta recolección se ha completado exitosamente
+            </div>
+          )}
+
+          {/* Botón cerrar siempre disponible */}
+          <button
+            onClick={onCancel}
+            className="pickupdetail-close-button"
+            style={{
+              backgroundColor: '#9e9e9e',
+              color: 'white',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              fontWeight: 600
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Botón para vista de request solamente (sin appointment) */}
+      {!isAppointmentView && (
+        <>
+          <button
+            onClick={onCancel}
+            className="pickupdetail-cancel-button"
+          >
+            Cerrar
+          </button>
+          {/* Botón eliminar solo para el reciclador dueño y estado abierto (1) */}
+          {isRecyclerRequestOwner() && requestData?.state === 1 && (
+            <button
+              onClick={handleDeleteRequest}
+              className="pickupdetail-delete-button"
+              disabled={deleting}
+              style={{
+                marginTop: '1rem',
+                backgroundColor: '#d32f2f',
+                color: 'white',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                fontWeight: 600,
+                opacity: deleting ? 0.6 : 1,
+                cursor: deleting ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {deleting ? 'Eliminando...' : '🗑️ Eliminar Solicitud'}
+            </button>
+          )}
+        </>
+      )}
+      {showRatingModal && appointmentData && (
+        <RatingModal 
+          appointmentId={Number(appointmentId)}
+          ratedToUserId={isRecycler() ? appointmentData.collectorId! : appointmentData.recyclerId!}
+          ratedToName={isRecycler() ? (appointmentData.collectorName || 'Recolector') : (appointmentData.recyclerName || 'Reciclador')}
+          ratedToCompanyName={isRecycler() ? appointmentData.collectorCompanyName : appointmentData.recyclerCompanyName}
+          userRole={isRecycler() ? 'reciclador' : 'recolector'}
+          onClose={handleRatingModalClose}
+          onSuccess={handleRatingSuccess}
+        />
+      )}
+
+      {showComplaintModal && appointmentData && (
+        <ComplaintModal 
+          appointmentId={Number(appointmentId)}
+          ratedToUserId={isRecycler() ? appointmentData.collectorId! : appointmentData.recyclerId!}
+          ratedToName={isRecycler() ? (appointmentData.collectorName || 'Recolector') : (appointmentData.recyclerName || 'Reciclador')}
+          ratedToCompanyName={isRecycler() ? appointmentData.collectorCompanyName : appointmentData.recyclerCompanyName}
+          userRole={isRecycler() ? 'reciclador' : 'recolector'}
+          onClose={handleComplaintModalClose}
+          onSuccess={handleComplaintSuccess}
+        />
+      )}
+
+      {/* Modal de confirmación para rechazar cita */}
+      {showRejectCheckModal && (
+        <CheckModal
+          title="Rechazar Solicitud"
+          message="¿Está seguro que desea rechazar esta solicitud de recolección? La solicitud volverá a estar disponible en el mapa para otros recolectores."
+          onConfirm={confirmRejectAppointment}
+          onCancel={() => setShowRejectCheckModal(false)}
+        />
+      )}
+
+      {/* Modal de éxito después de rechazar */}
+      {showRejectSuccessModal && (
+        <SuccessModal
+          title="Solicitud Rechazada"
+          message="La cita ha sido rechazada exitosamente. La solicitud estará disponible nuevamente en el mapa."
+          onClose={() => {
+            setShowRejectSuccessModal(false);
+            // Recargar la página para que el mapa se actualice con la solicitud disponible nuevamente
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          }}
+        />
+      )}
+
+      {/* Modal de éxito general */}
+      {showSuccessModal && (
+        <SuccessModal
+          title={successMessage.title}
+          message={successMessage.message}
+          onClose={() => {
+            setShowSuccessModal(false);
+           
+            if (shouldReloadOnSuccessClose) {
+              setShouldReloadOnSuccessClose(false);
+              window.location.reload();
+            }
+          }}
+        />
+      )}
+
+      {/* Modal de error general */}
+      {showErrorModal && (
+        <SuccessModal
+          title="❌ Error"
+          message={errorModalMessage}
+          onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
+      {/* Modal de confirmación para cancelar cita */}
+      {showCancelConfirmModal && (
+        <CheckModal
+          title="Cancelar Cita"
+          message="¿Está seguro que desea CANCELAR esta cita? La solicitud volverá a estar disponible en el mapa para otros recolectores."
+          onConfirm={confirmCancelAppointment}
+          onCancel={() => setShowCancelConfirmModal(false)}
+        />
+      )}
+
+      {/* Modal de confirmación para aceptar cita */}
+      {showAcceptConfirmModal && (
+        <CheckModal
+          title="Aceptar Solicitud"
+          message="¿Desea ACEPTAR esta solicitud de recolección? La cita quedará confirmada y el usuario será notificado."
+          onConfirm={confirmAcceptAppointment}
+          onCancel={() => setShowAcceptConfirmModal(false)}
+        />
+      )}
+
+      {/* Modal de confirmación para completar cita */}
+      {showCompleteCheckModal && (
+        <CheckModal
+          title="Completar Recolección"
+          message="¿Está seguro que desea marcar esta recolección como COMPLETADA?"
+          onConfirm={confirmCompleteAppointment}
+          onCancel={() => setShowCompleteCheckModal(false)}
+        />
+      )}
+
+      {/* Modal de confirmación para eliminar solicitud */}
+      {showDeleteConfirmModal && (
+        <ConfirmModal
+          title="¿Eliminar Solicitud?"
+          message="¿Seguro que deseas eliminar esta solicitud? Esta acción es irreversible para el usuario y no se puede deshacer."
+          onConfirm={confirmDeleteRequest}
+          onCancel={() => setShowDeleteConfirmModal(false)}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          isDangerous={true}
+        />
+      )}
+
+    </div>
+  );
+};
+
+export default PickupInfo;

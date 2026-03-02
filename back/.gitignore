@@ -1,0 +1,179 @@
+# ==============================
+# ARCHIVOS DE CONFIGURACIÓN
+# ==============================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+config.json
+config.js
+
+# ==============================
+# NODE.JS
+# ==============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ==============================
+# ARCHIVOS DE RUNTIME
+# ==============================
+*.pid
+*.seed
+*.pid.lock
+.npm
+.node_repl_history
+
+# ==============================
+# ARCHIVOS TEMPORALES
+# ==============================
+*.tmp
+*.temp
+.tmp/
+temp/
+
+# ==============================
+# LOGS
+# ==============================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ==============================
+# COVERAGE/TESTING
+# ==============================
+coverage/
+*.lcov
+.nyc_output
+.coverage
+.jest
+
+# ==============================
+# ARCHIVOS DE USUARIO SUBIDOS
+# ==============================
+uploads/images/*
+!uploads/images/.gitkeep
+uploads/documents/*
+!uploads/documents/.gitkeep
+uploads/temp/*
+!uploads/temp/.gitkeep
+
+# ==============================
+# BASE DE DATOS
+# ==============================
+*.db
+*.sqlite
+*.sqlite3
+database.json
+dumps/
+backups/
+
+# ==============================
+# CACHE
+# ==============================
+.cache/
+.parcel-cache/
+.eslintcache
+
+# ==============================
+# EDITOR/IDE
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==============================
+# SISTEMA OPERATIVO
+# ==============================
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==============================
+# HERRAMIENTAS DE DESARROLLO
+# ==============================
+.webpack/
+.rollup.cache/
+.terser-cache/
+.eslintrc.local.js
+.prettierrc.local.js
+
+# ==============================
+# DOCUMENTACIÓN GENERADA
+# ==============================
+docs/
+documentation/
+*.md.bak
+
+# ==============================
+# BACKUPS
+# ==============================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ==============================
+# CERTIFICADOS SSL
+# ==============================
+*.pem
+*.key
+*.crt
+*.cert
+ssl/
+certificates/
+
+# ==============================
+# SCRIPTS DE DEPLOY
+# ==============================
+deploy.sh
+deploy.bat
+.deployment
+.deploy/

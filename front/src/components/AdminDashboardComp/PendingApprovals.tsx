@@ -1,0 +1,49 @@
+import './AdminDashboard.css';
+import { useEffect, useState } from 'react';
+import api from '../../services/api';
+import { API_ENDPOINTS } from '../../config/endpoints';
+
+export default function PendingApprovals({ setActiveMenu }: { setActiveMenu?: (menu: string) => void }) {
+  const [requests, setRequests] = useState([]);
+
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const response = await api.get(API_ENDPOINTS.USERS.GET_COLLECTORS_PENDING);
+        if (response.data.success) {
+          setRequests(response.data.collectors || []);
+        } else {
+          setRequests([]);
+        }
+      } catch (err) {
+        setRequests([]);
+      }
+    }
+    fetchRequests();
+  }, []);
+
+  const goToAccess = () => {
+    if (setActiveMenu) setActiveMenu('accesos');
+    else window.dispatchEvent(new CustomEvent('navigate-to-access'));
+  };
+
+  return (
+    <div className="card">
+      <h2 className="card-title">Aprobaciones pendientes</h2>
+      <p className="card-subtitle">Solicitudes de acceso a cuenta recicladora</p>
+      <div className="list-container">
+        {requests.slice(0, 3).map((request: any) => (
+          <div key={request.userId} className="list-item">
+            <div className="list-item-avatar avatar-green">
+              <span>{request.firstname?.[0]?.toUpperCase() || request.email?.[0]?.toUpperCase() || 'A'}</span>
+            </div>
+            <span className="list-item-name">{request.firstname ? `${request.firstname} ${request.lastname}` : request.email}</span>
+          </div>
+        ))}
+      </div>
+      <button className="card-button" onClick={goToAccess}>
+        {requests.length > 3 ? 'Ver más' : 'Ver Solicitudes'}
+      </button>
+    </div>
+  );
+}
