@@ -12,34 +12,27 @@
 }
 
 /* Header Styles */
-.header {
-  
-  background-image: url("../../assets/Cardboard.jpg");
-  background-size: cover;   
-  background-position: center; 
-  background-repeat: no-repeat; 
-  min-height: 140px ; 
-  padding: 20px 0 !important;
+.recycler-header {
+  background-color: #2a5d3f !important;
+  min-height: 70px;
+  padding: 10px 20px !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .logo-img{
-  
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: left center;
 }
 .logo-container {
- 
-  width: 350px ;
-  height: 100px ;
-  min-width: 350px;
-   display: flex;
+  min-width: 180px;
+  display: flex;
   align-items: center;
   justify-content: flex-start;
-
+  gap: 8px;
 }
 
 .logo-icon {
@@ -57,10 +50,9 @@
 }
 
 .user-name {
-  color: #0d743b;
+  color: white !important;
   font-weight: 500;
-  font-size: 16px;
-  
+  font-size: 0.95rem;
 }
 .user-dropdown-btn {
   text-decoration: none !important; 
@@ -91,7 +83,7 @@
 }
 .dropdown-arrow {
   font-size: 20px;       
-  color: #0d743b;       
+  color: #E2F3C9;       
   line-height: 1;
 }
 /* Main Content */
@@ -320,16 +312,17 @@
 }
 
 @media (max-width: 768px) {
-  .header {
-    padding: 15px 20px;
+  .recycler-header {
+    padding: 10px 20px !important;
+    min-height: auto;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
   }
   
   .logo-container {
     width: 250px;
     min-width: 250px;
-    height: 80px;
+    height: 70px;
   }
   
   .main-content {
@@ -371,8 +364,11 @@
 }
 
 @media (max-width: 576px) {
-  .header {
-    padding: 12px 15px;
+  .recycler-header {
+    padding: 10px 15px !important;
+    min-height: auto;
+    flex-direction: column;
+    gap: 8px;
   }
   
   .logo-container {
@@ -382,12 +378,19 @@
   }
   
   .user-name {
-    font-size: 14px;
+    font-size: 13px;
   }
   
-  .user-avatar {
-    width: 35px;
-    height: 35px;
+  .user-avatar div {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+  
+  .user-profile {
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
   }
   
   .main-content {
