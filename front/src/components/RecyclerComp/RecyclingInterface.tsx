@@ -127,7 +127,7 @@ const RecyclingInterface: React.FC = () => {
                       {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
                     </div>
                     <span className="recycler-name-new">{recycler.name || recycler.email || 'Reciclador'}</span>
-                    <span className="recycler-points-new">IDK {recycler.puntaje_final || recycler.points || 0}.000</span>
+                    <span className="recycler-points-new">{recycler.puntaje_final || recycler.points || 0}</span>
                   </div>
                 ))}
             </div>

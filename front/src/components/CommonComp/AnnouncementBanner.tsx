@@ -78,49 +78,19 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({ role, position 
   const bannerClass = position === 'left' ? 'banner-left' : 'banner-right';
 
   return (
-    <div className={bannerClass} style={{
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f5f5f5',
-      border: '2px solid #e0e0e0',
-      padding: 0
-    }}>
+    <div className={`announcement-sidebar-card ${bannerClass}`}>
       {loading ? (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          fontSize: '0.9rem',
-          color: '#999'
-        }}>
+        <div className="announcement-loading">
           Cargando anuncios...
         </div>
       ) : announcement ? (
         <>
-          {/* Imagen del anuncio - ocupa todo el espacio disponible */}
-          <div style={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
+          {/* Imagen del anuncio */}
+          <div className="announcement-image-section">
             <img
               src={getImageUrl(announcement.imagePath)}
               alt={announcement.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
+              className="announcement-image"
               onError={() => {
                 console.error('❌ Error cargando imagen:', getImageUrl(announcement.imagePath));
               }}
@@ -128,59 +98,37 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({ role, position 
                 console.log('✅ Imagen cargada:', getImageUrl(announcement.imagePath));
               }}
             />
+          </div>
 
-            {/* Controles superpuestos en la imagen */}
-            <div style={{
-              position: 'absolute',
-              bottom: '0',
-              left: '0',
-              right: '0',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              padding: '12px',
-              backdropFilter: 'blur(2px)'
-            }}>
-              {/* Indicador de página */}
-              {announcements.length > 1 && (
-                <div style={{
-                  display: 'flex',
-                  gap: '6px',
-                  alignItems: 'center'
-                }}>
-                  {announcements.map((_, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: idx === currentIndex ? '#149D52' : 'rgba(255,255,255,0.5)',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onClick={() => {
-                        setCurrentIndex(idx);
-                        setAnnouncement(announcements[idx]);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* Contenido del anuncio */}
+          <div className="announcement-content-section">
+            <h3 className="announcement-title">{announcement.title}</h3>
+            <p className="announcement-description">
+              2 cajas medianas de cartón en buen estado para reciclar
+            </p>
+            <button className="announcement-explore-btn">
+              Explorar →
+            </button>
+
+            {/* Indicadores de página */}
+            {announcements.length > 1 && (
+              <div className="announcement-indicators">
+                {announcements.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`indicator-dot ${idx === currentIndex ? 'active' : ''}`}
+                    onClick={() => {
+                      setCurrentIndex(idx);
+                      setAnnouncement(announcements[idx]);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </>
       ) : (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          fontSize: '0.9rem',
-          color: '#999'
-        }}>
+        <div className="announcement-empty">
           Sin anuncios disponibles
         </div>
       )}

@@ -296,7 +296,7 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
               {activeRequests.length > 0 ? (
                 activeRequests.slice(0, 2).map((request, idx) => (
                   <div key={request.id} className={`request-card ${idx === 0 ? 'orange' : 'green'}`}>
-                    <div className="card-icon">📦</div>
+                    <div className="card-icon">♻️</div>
                    <h4>{request.materialName || 'Reciclaje de cartón'}</h4>
                     <p>{request.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
                     <Link to={`/pickupDetails/${request.id}`} className="btn-details">
