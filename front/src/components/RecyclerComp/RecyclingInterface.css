@@ -96,6 +96,323 @@
   min-height: calc(100vh - 80px);
 }
 
+/* Layout principal */
+.main-content-new {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  gap: 20px;
+  padding: 20px;
+  background-color: #F5F0E6;
+  min-height: calc(100vh - 70px);
+}
+
+/* Sidebar Izquierdo */
+.left-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar-section {
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.sidebar-header {
+  background: transparent;
+  color: #4A7C59;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  user-select: none;
+  border-bottom: 2px solid #4A7C59;
+  transition: all 0.3s;
+}
+
+.sidebar-header:hover {
+  opacity: 0.8;
+}
+
+.sidebar-header.active {
+  color: #4A7C59;
+}
+
+.sidebar-header .arrow {
+  font-size: 16px;
+  transition: transform 0.3s;
+  display: inline-block;
+  width: 20px;
+  font-weight: 700;
+}
+
+.sidebar-header .arrow.rotated {
+  transform: rotate(0deg);
+}
+
+.sidebar-header .arrow:not(.rotated) {
+  transform: rotate(0deg);
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sidebar-content {
+  padding: 15px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 800px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.sidebar-content.collapsed {
+  max-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.request-card {
+  padding: 20px;
+  border-radius: 12px;
+  color: white;
+  position: relative;
+}
+
+.request-card.orange {
+  background: linear-gradient(135deg, #D97B45 0%, #C96A3A 100%);
+}
+
+.request-card.green {
+  background: linear-gradient(135deg, #5BA376 0%, #4A9D5F 100%);
+}
+
+.card-icon {
+  width: 45px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.request-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.request-card p {
+  margin: 0 0 15px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.btn-details {
+  background: rgba(74, 124, 89, 0.9);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-details:hover {
+  background: rgba(74, 124, 89, 1);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.no-data-sidebar {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 13px;
+}
+
+/* Contenido Central */
+.center-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Botón recicla */
+.recycle-banner {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 20px;
+  border: none;
+  border-radius: 15px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.recycle-banner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* Top Recicladores Card */
+.top-recyclers-card {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.top-recyclers-card .card-title {
+  color: #4CAF50;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+}
+
+.top-recyclers-card .card-subtitle {
+  color: #666;
+  font-size: 13px;
+  margin: 0 0 20px 0;
+}
+
+.recyclers-list-new {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recycler-item-new {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px;
+  background: #F8F9FA;
+  border-radius: 10px;
+  transition: transform 0.2s;
+}
+
+.recycler-item-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.recycler-avatar-new {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.recycler-name-new {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+  font-size: 15px;
+}
+
+.recycler-points-new {
+  color: #666;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+
+.how-to-recycle {
+  margin-top: 20px;
+}
+
+.how-to-recycle h2 {
+  text-align: center;
+  color: #4A7C59;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+.steps-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.step-card {
+  background: white;
+  border: 2px solid #4A7C59;
+  border-radius: 12px;
+  padding: 50px 20px;
+  text-align: center;
+  transition: all 0.3s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.step-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(74, 124, 89, 0.2);
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #4A7C59;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #4A7C59;
+  background: white;
+}
+
+.step-card h3 {
+  margin: 0;
+  color: #4A7C59;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Sidebar Derecho */
+.right-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Banners laterales: solo fondo violeta */
 .banner-left,
 .banner-right {
@@ -285,6 +602,129 @@
   color: #666;
   font-weight: 600;
   font-size: 14px;
+}
+
+/* Tablets (768px - 1024px) */
+@media (max-width: 1024px) {
+  .main-content-new {
+    grid-template-columns: 250px 1fr 280px;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .recycle-banner {
+    font-size: 28px;
+    letter-spacing: 4px;
+    padding: 18px;
+  }
+
+  .steps-container {
+    gap: 15px;
+  }
+
+  .step-card {
+    padding: 40px 15px;
+  }
+}
+
+/* Tablets pequeñas y móviles grandes (576px - 768px) */
+@media (max-width: 768px) {
+  .main-content-new {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 15px;
+  }
+
+  .left-sidebar {
+    order: 1;
+  }
+
+  .center-content {
+    order: 2;
+  }
+
+  .right-sidebar {
+    order: 3;
+  }
+
+  .recycle-banner {
+    font-size: 24px;
+    letter-spacing: 3px;
+    padding: 15px;
+  }
+
+  .steps-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .step-card {
+    padding: 30px 20px;
+  }
+
+  .how-to-recycle h2 {
+    font-size: 20px;
+  }
+}
+
+/* Móviles pequeños (menos de 576px) */
+@media (max-width: 576px) {
+  .main-content-new {
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .recycle-banner {
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 12px;
+  }
+
+  .top-recyclers-card {
+    padding: 15px;
+  }
+
+  .top-recyclers-card .card-title {
+    font-size: 18px;
+  }
+
+  .recycler-item-new {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .recycler-avatar-new {
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
+  }
+
+  .recycler-name-new {
+    font-size: 14px;
+  }
+
+  .recycler-points-new {
+    font-size: 12px;
+  }
+
+  .how-to-recycle h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .step-card {
+    padding: 25px 15px;
+  }
+
+  .step-number {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+
+  .step-card h3 {
+    font-size: 14px;
+  }
 }
 
 /* Responsive Design */

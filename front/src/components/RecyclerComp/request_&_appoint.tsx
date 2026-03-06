@@ -236,6 +236,20 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
     </div>
   );
 
+  const renderAppointmentSidebarCard = (appointment: Appointment) => (
+    <div key={appointment.id} className="request-card green">
+      <div className="card-icon">♻️</div>
+      <h4>{appointment.materialName || 'Reciclaje de cartón'}</h4>
+      <p>{appointment.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
+      <Link 
+        to={`/pickupDetails/${appointment.idRequest}?appointmentId=${appointment.id}`} 
+        className="btn-details"
+      >
+        Ver Detalles
+      </Link>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="container my-5">
@@ -260,95 +274,162 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
   }
 
   return (
-    <div>
-      <div className="container my-4 px-3">
-        <div className="row g-4">
-          {user.role === 'reciclador' ? (
-            <>
-              {/* Para Recicladores */}
-              {/* Solicitudes Activas */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Solicitudes activas</h3>
-                  {activeRequests.length > 0 ? (
-                    activeRequests.map(renderRequestCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay solicitudes activas</div>
-                  )}
-                </div>
-              </div>
+    <div className="sidebar-sections">
+      {user.role === 'reciclador' ? (
+        <>
+          {/* Para Recicladores */}
+          {/* Solicitudes Activas */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header active"
+              onClick={() => {
+                const content = document.getElementById('solicitudes-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Solicitudes activas</h3>
+            </div>
+            <div id="solicitudes-content" className="sidebar-content">
+              {activeRequests.length > 0 ? (
+                activeRequests.slice(0, 2).map((request, idx) => (
+                  <div key={request.id} className={`request-card ${idx === 0 ? 'orange' : 'green'}`}>
+                    <div className="card-icon">📦</div>
+                   <h4>{request.materialName || 'Reciclaje de cartón'}</h4>
+                    <p>{request.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
+                    <Link to={`/pickupDetails/${request.id}`} className="btn-details">
+                      Ver Detalles
+                    </Link>
+                  </div>
+                ))
+              ) : (
+                <div className="no-data-sidebar">No hay solicitudes activas</div>
+              )}
+            </div>
+          </div>
 
-              {/* Citas Activas */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Citas activas</h3>
-                  {activeAppointments.length > 0 ? (
-                    activeAppointments.map(renderAppointmentCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay citas activas</div>
-                  )}
-                </div>
-              </div>
+          {/* Citas Activas */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header"
+              onClick={() => {
+                const content = document.getElementById('citas-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Citas activas</h3>
+            </div>
+            <div id="citas-content" className="sidebar-content collapsed">
+              {activeAppointments.length > 0 ? (
+                activeAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+              ) : (
+                <div className="no-data-sidebar">No hay citas activas</div>
+              )}
+            </div>
+          </div>
 
-              {/* Historial de Citas */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Historial de citas</h3>
-                  {appointmentHistory.length > 0 ? (
-                    appointmentHistory.map(renderAppointmentCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay historial de citas</div>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Para Recolectores */}
-              {/* Citas Pendientes */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Citas pendientes</h3>
-                  {pendingAppointments.length > 0 ? (
-                    pendingAppointments.map(renderAppointmentCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay citas pendientes</div>
-                  )}
-                </div>
-              </div>
+          {/* Historial de Citas */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header"
+              onClick={() => {
+                const content = document.getElementById('historial-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Historial de citas</h3>
+            </div>
+            <div id="historial-content" className="sidebar-content collapsed">
+              {appointmentHistory.length > 0 ? (
+                appointmentHistory.slice(0, 2).map(renderAppointmentSidebarCard)
+              ) : (
+                <div className="no-data-sidebar">No hay historial</div>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Para Recolectores */}
+          {/* Citas Pendientes */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header active"
+              onClick={() => {
+                const content = document.getElementById('pendientes-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Citas pendientes</h3>
+            </div>
+            <div id="pendientes-content" className="sidebar-content">
+              {pendingAppointments.length > 0 ? (
+                pendingAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+              ) : (
+                <div className="no-data-sidebar">No hay citas pendientes</div>
+              )}
+            </div>
+          </div>
 
-              {/* Citas Activas */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Citas activas</h3>
-                  {activeAppointments.length > 0 ? (
-                    activeAppointments.map(renderAppointmentCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay citas activas</div>
-                  )}
-                </div>
-              </div>
+          {/* Citas Activas */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header"
+              onClick={() => {
+                const content = document.getElementById('citas-collector-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Citas activas</h3>
+            </div>
+            <div id="citas-collector-content" className="sidebar-content collapsed">
+              {activeAppointments.length > 0 ? (
+                activeAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+              ) : (
+                <div className="no-data-sidebar">No hay citas activas</div>
+              )}
+            </div>
+          </div>
 
-              {/* Historial de Citas */}
-              <div className="col-12 col-md-6 col-lg-4">
-                <div className="appointments-column">
-                  <h3 className="text-center mb-4">Historial de citas</h3>
-                  {appointmentHistory.length > 0 ? (
-                    appointmentHistory.map(renderAppointmentCard)
-                  ) : (
-                    <div className="no-data text-center p-4">No hay historial de citas</div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        © 2025 GreenBit · Todos los derechos reservados
-      </footer>
+          {/* Historial de Citas */}
+          <div className="sidebar-section">
+            <div 
+              className="sidebar-header"
+              onClick={() => {
+                const content = document.getElementById('historial-collector-content');
+                if (content) {
+                  content.classList.toggle('collapsed');
+                }
+              }}
+            >
+              <span className="arrow">›</span>
+              <h3>Historial de citas</h3>
+            </div>
+            <div id="historial-collector-content" className="sidebar-content collapsed">
+              {appointmentHistory.length > 0 ? (
+                appointmentHistory.slice(0, 2).map(renderAppointmentSidebarCard)
+              ) : (
+                <div className="no-data-sidebar">No hay historial</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

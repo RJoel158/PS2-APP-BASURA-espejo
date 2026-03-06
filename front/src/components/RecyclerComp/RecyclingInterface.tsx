@@ -97,45 +97,67 @@ const RecyclingInterface: React.FC = () => {
         />
       )}
 
-      <div className="main-content">
-        {/* Banner Izquierdo con Anuncios */}
-        <AnnouncementBanner role="reciclador" position="left" />
+      <div className="main-content-new">
+        {/* Sidebar Izquierdo - Solicitudes y Citas */}
+        <div className="left-sidebar">
+          <RequestAndAppoint user={user} />
+        </div>
 
-        {/* Sección Reciclaje */}
-        <div className="recycling-section">
-          <button className="recycling-button" onClick={handleRecycleClick}>
-          ♻️R E C I C L A♻️
+        {/* Contenido Central */}
+        <div className="center-content">
+          {/* Botón RECICLA */}
+          <button className="recycle-banner" onClick={handleRecycleClick}>
+            ♻️ R E C I C L A ♻️
           </button>
 
-          <div className="recyclers-card">
+          {/* Top Recicladores */}
+          <div className="top-recyclers-card">
             <h3 className="card-title">Top Recicladores</h3>
             <p className="card-subtitle">
               {periodState === 'activo' ? 'Índice de reciclaje este mes' : 'Último ranking de periodo cerrado'}
             </p>
 
-            <div className="recyclers-list">
+            <div className="recyclers-list-new">
               {recyclers
                 .filter(r => r.rol === 'reciclador')
-                .slice(0, 5)
+                .slice(0, 4)
                 .map((recycler, idx) => (
-                  <div key={recycler.user_id || recycler.id || idx} className="recycler-item">
-                    <div className={`recycler-avatar recycler-avatar-letter recycler-avatar-color-${idx % 5}`}>
+                  <div key={recycler.user_id || recycler.id || idx} className="recycler-item-new">
+                    <div className={`recycler-avatar-new recycler-avatar-color-${idx % 5}`}>
                       {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
                     </div>
-                    <span className="recycler-name">{recycler.name || recycler.email || 'Reciclador'}</span>
-                    <span className="recycler-points">{recycler.puntaje_final || recycler.points || 0}</span>
+                    <span className="recycler-name-new">{recycler.name || recycler.email || 'Reciclador'}</span>
+                    <span className="recycler-points-new">IDK {recycler.puntaje_final || recycler.points || 0}.000</span>
                   </div>
                 ))}
             </div>
           </div>
+
+          {/* Cómo puedo reciclar */}
+          <div className="how-to-recycle">
+            <h2>¿Cómo puedo reciclar?</h2>
+            <div className="steps-container">
+              <div className="step-card">
+                <div className="step-number">1</div>
+                <h3>Rellena el formulario</h3>
+              </div>
+              <div className="step-card">
+                <div className="step-number">2</div>
+                <h3>Espera</h3>
+              </div>
+              <div className="step-card">
+                <div className="step-number">3</div>
+                <h3>Coordina</h3>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Banner Derecho con Anuncios */}
-        <AnnouncementBanner role="reciclador" position="right" />
+        {/* Sidebar Derecho - Anuncio */}
+        <div className="right-sidebar">
+          <AnnouncementBanner role="reciclador" position="right" />
+        </div>
       </div>
-
-      {/* Request and Appoint */}
-      <RequestAndAppoint user={user} />
     </div>
   );
 };
