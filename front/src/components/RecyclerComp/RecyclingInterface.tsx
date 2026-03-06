@@ -6,6 +6,7 @@ import { getActiveOrLastPeriod, getLiveRanking, getHistoricalRanking } from "../
 import RequestAndAppoint from "./request_&_appoint";
 import ChangePasswordModal from "../PasswordComp/ChangePasswordModal";
 import AnnouncementBanner from "../CommonComp/AnnouncementBanner";
+import Footer from "../HomeComps/Footer";
 
 interface Recycler {
   id: number;
@@ -150,7 +151,7 @@ const RecyclingInterface: React.FC = () => {
               <div className="step-card">
                 <div className="step-number">3</div>
                 <h3>Coordina</h3>
-                <p>Si tienes una solicitud puedes aceptarla o rechazarla, haz match con el recolector ante cualquier duda.</p>
+                <p>Si tienes una solicitud puedes aceptarla o rechazarla, habla con el recolector ante cualquier duda.</p>
               </div>
             </div>
           </div>
@@ -161,6 +162,9 @@ const RecyclingInterface: React.FC = () => {
           <AnnouncementBanner role="reciclador" position="right" />
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

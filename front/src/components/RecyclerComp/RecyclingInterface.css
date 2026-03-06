@@ -1025,3 +1025,271 @@
     border-radius: 12px;
   }
 }
+
+
+@media (max-width: 1200px) {
+  .main-content-new {
+    grid-template-columns: 300px 1fr 320px;
+    gap: 15px;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main-content-new {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 15px;
+  }
+
+  .left-sidebar,
+  .right-sidebar {
+    width: 100%;
+  }
+
+  .steps-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .step-card {
+    width: 100%;
+  }
+
+  .recyclers-list-new {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .recycler-header {
+    padding: 10px 15px !important;
+    min-height: 60px;
+  }
+
+  .logo-container {
+    min-width: 150px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .main-content-new {
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .recycle-banner {
+    font-size: 24px;
+    padding: 15px;
+  }
+
+  .top-recyclers-card {
+    padding: 15px;
+  }
+
+  .card-title {
+    font-size: 18px;
+  }
+
+  .how-to-recycle h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .step-card {
+    padding: 25px 15px;
+    min-height: 180px;
+  }
+
+  .step-number {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+
+  .step-card h3 {
+    font-size: 16px;
+  }
+
+  .step-card p {
+    font-size: 12px;
+  }
+
+  .sidebar-section {
+    padding: 15px;
+  }
+
+  .sidebar-header h3 {
+    font-size: 16px;
+  }
+
+  .request-card {
+    padding: 12px;
+  }
+
+  .announcement-sidebar-card {
+    margin-bottom: 15px;
+  }
+
+  .announcement-image-section {
+    height: 200px;
+    min-height: 200px;
+  }
+
+  .announcement-content-section {
+    padding: 20px;
+    min-height: 180px;
+  }
+
+  .announcement-title {
+    font-size: 18px;
+  }
+
+  .announcement-description {
+    font-size: 13px;
+  }
+
+  .announcement-explore-btn {
+    padding: 10px 22px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .recycler-header {
+    flex-wrap: wrap;
+    min-height: auto;
+    padding: 8px 10px !important;
+  }
+
+  .logo-container {
+    min-width: 120px;
+  }
+
+  .user-avatar {
+    width: 35px;
+    height: 35px;
+  }
+
+  .main-content-new {
+    padding: 8px;
+    gap: 12px;
+  }
+
+  .recycle-banner {
+    font-size: 20px;
+    padding: 12px;
+  }
+
+  .top-recyclers-card {
+    padding: 12px;
+  }
+
+  .recyclers-list-new {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .recycler-item-new {
+    padding: 12px;
+  }
+
+  .recycler-avatar-new {
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
+  }
+
+  .recycler-name-new {
+    font-size: 13px;
+  }
+
+  .recycler-points-new {
+    font-size: 12px;
+  }
+
+  .how-to-recycle h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .step-card {
+    padding: 20px 12px;
+    min-height: 160px;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .step-card h3 {
+    font-size: 15px;
+  }
+
+  .step-card p {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .sidebar-section {
+    padding: 12px;
+  }
+
+  .sidebar-header h3 {
+    font-size: 14px;
+  }
+
+  .request-card {
+    padding: 10px;
+  }
+
+  .material-type {
+    font-size: 13px;
+  }
+
+  .btn-details {
+    padding: 6px 16px;
+    font-size: 12px;
+  }
+
+  .announcement-sidebar-card {
+    margin-bottom: 10px;
+  }
+
+  .announcement-image-section {
+    height: 160px;
+    min-height: 160px;
+  }
+
+  .announcement-content-section {
+    padding: 15px;
+    min-height: 150px;
+  }
+
+  .announcement-title {
+    font-size: 15px;
+  }
+
+  .announcement-description {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .announcement-explore-btn {
+    padding: 8px 18px;
+    font-size: 12px;
+  }
+
+  .announcement-indicators {
+    margin-top: 8px;
+  }
+
+  .indicator-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
