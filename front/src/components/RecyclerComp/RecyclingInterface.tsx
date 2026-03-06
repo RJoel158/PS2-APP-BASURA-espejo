@@ -140,14 +140,17 @@ const RecyclingInterface: React.FC = () => {
               <div className="step-card">
                 <div className="step-number">1</div>
                 <h3>Rellena el formulario</h3>
+                <p>Apreta el botón recicla y rellena el formulario.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">2</div>
                 <h3>Espera</h3>
+                <p>Espera a que soliciten recoger tu material.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">3</div>
                 <h3>Coordina</h3>
+                <p>Si tienes una solicitud puedes aceptarla o rechazarla, haz match con el recolector ante cualquier duda.</p>
               </div>
             </div>
           </div>
