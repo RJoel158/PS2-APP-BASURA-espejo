@@ -1,13 +1,14 @@
-
+import GreenBitLogo from '../../assets/GreenBit.svg';
+import './Footer.css';
 
 export default function Footer(){
   return (
-    <footer className="py-4" style={{background:"#0c2b18", color:"#d6efd6"}}>
-      <div className="container d-flex justify-content-between align-items-center">
-        <div>
-          <strong>GreenBit</strong> &nbsp; — Transformando el futuro
+    <footer className="footer-greenbit">
+      <div className="footer-content">
+        <div className="footer-logo">
+          <img src={GreenBitLogo} alt="GreenBit" />
         </div>
-        <div className="small">© {new Date().getFullYear()} GreenBit — Todos los derechos</div>
+        <div className="footer-text">© {new Date().getFullYear()} GreenBit-Reciclaje inteligente</div>
       </div>
     </footer>
   );

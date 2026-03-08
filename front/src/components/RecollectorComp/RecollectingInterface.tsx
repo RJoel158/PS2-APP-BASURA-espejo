@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import RequestAndAppoint from "../RecyclerComp/request_&_appoint";
 import ChangePasswordModal from "../PasswordComp/ChangePasswordModal";
 import AnnouncementBanner from "../CommonComp/AnnouncementBanner";
+import Footer from "../HomeComps/Footer";
 
 interface Recycler {
   id: number;
@@ -85,59 +86,86 @@ const RecollectingInterface: React.FC = () => {
    if (!user) return null;
 
   return (
-    
     <div className="recycling-container">
-      {/* Header separado */}
+      {/* Header */}
       <Header user={user} />
+
+      {/* Modal de cambio de contraseña */}
       {showModal && (
         <ChangePasswordModal
           userId={user.id}
           role={user.role}
-          
         />
       )}
-      <div className="main-content">
-        {/* Banner Izquierdo con Anuncios */}
-        <AnnouncementBanner role="recolector" position="left" />
 
-        {/* Sección Reciclaje */}
-        <div className="recycling-section">
-          <button className="recycling-button"
-            onClick={() => navigate("/recycling-points")}
-            >♻️C O L E C T A♻️</button>
-          
-          
-          {/* Botón para ver puntos de reciclaje */}
+      <div className="main-content-new">
+        {/* Sidebar Izquierdo - Solicitudes y Citas */}
+        <div className="left-sidebar">
+          <RequestAndAppoint user={user} />
+        </div>
 
-          <div className="recyclers-card">
-            <h3 className="card-title">Top Recicladores</h3>
+        {/* Contenido Central */}
+        <div className="center-content">
+          {/* Botón COLECTA */}
+          <button className="recycle-banner" onClick={() => navigate("/recycling-points")}>
+            ♻️ C O L E C T A ♻️
+          </button>
+
+          {/* Top Recolectores */}
+          <div className="top-recyclers-card">
+            <h3 className="card-title">Top Recolectores</h3>
             <p className="card-subtitle">
               {periodState === 'activo' ? 'Índice de reciclaje este mes' : 'Último ranking de periodo cerrado'}
             </p>
 
-            <div className="recyclers-list">
+            <div className="recyclers-list-new">
               {recyclers
                 .filter(r => r.rol === 'recolector')
-                .slice(0, 5)
+                .slice(0, 4)
                 .map((recycler, idx) => (
-                  <div key={recycler.user_id || recycler.id || idx} className="recycler-item">
-                    <div className={`recycler-avatar recycler-avatar-letter recycler-avatar-color-${idx % 5}`}>
+                  <div key={recycler.user_id || recycler.id || idx} className="recycler-item-new">
+                    <div className={`recycler-avatar-new recycler-avatar-color-${idx % 5}`}>
                       {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
                     </div>
-                    <span className="recycler-name">{recycler.name || recycler.email || 'Recolector'}</span>
-                    <span className="recycler-points">{recycler.puntaje_final || recycler.points || 0}</span>
+                    <span className="recycler-name-new">{recycler.name || recycler.email || 'Recolector'}</span>
+                    <span className="recycler-points-new">{recycler.puntaje_final || recycler.points || 0}</span>
                   </div>
                 ))}
             </div>
           </div>
+
+          {/* Cómo puedo recolectar */}
+          <div className="how-to-recycle">
+            <h2>¿Cómo puedo recolectar?</h2>
+            <div className="steps-container">
+              <div className="step-card">
+                <div className="step-number">1</div>
+                <h3>Busca</h3>
+                <p>Apreta colecta y revisa las solicitudes activas en el mapa, puedes filtrar por material.</p>
+              </div>
+              <div className="step-card">
+                <div className="step-number">2</div>
+                <h3>Solicita</h3>
+                <p>Selecciona alguna solicitud de reciclaje que te interesa, revisa bien la hora y fecha, ingresa una hora que te sea cómoda.</p>
+              </div>
+              <div className="step-card">
+                <div className="step-number">3</div>
+                <h3>Coordina</h3>
+                <p>Si tu solicitud es aceptada, coordina con el reciclador para recoger el material.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Banner Derecho con Anuncios */}
-        <AnnouncementBanner role="recolector" position="right" />
+        {/* Sidebar Derecho - Anuncio */}
+        <div className="right-sidebar">
+          <AnnouncementBanner role="recolector" position="right" />
+        </div>
       </div>
-       <RequestAndAppoint user={user} />
+
+      {/* Footer */}
+      <Footer />
     </div>
-    
   );
 };
 
