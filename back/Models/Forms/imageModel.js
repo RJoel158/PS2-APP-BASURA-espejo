@@ -62,7 +62,7 @@ export const getAll = async () => {
     const [rows] = await db.query(
       `SELECT i.id, i.idRequest, i.image, i.uploadedDate,
               r.description as request_description,
-              u.username as user_name
+              u.email as user_name
        FROM image i
        LEFT JOIN request r ON i.idRequest = r.id
        LEFT JOIN users u ON r.idUser = u.id

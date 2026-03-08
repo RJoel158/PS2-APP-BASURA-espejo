@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Converter</title></head>
+<body>
+<h2>Open this in a browser, right-click each icon and "Save as PNG"</h2>
+<div id="icons"></div>
+<script>
+const sizes = [72,96,128,144,152,192,384,512];
+sizes.forEach(size => {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#198754');
+  grad.addColorStop(1, '#0d6e3f');
+  
+  const r = size * 0.18;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, r);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  
+  // Text
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold ' + (size * 0.32) + 'px Arial, Helvetica, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GB', size/2, size/2 + size*0.02);
+  
+  // Leaf accent
+  const fx = size/2 + size*0.17;
+  const fy = size/2 - size*0.17;
+  ctx.beginPath();
+  ctx.arc(fx, fy, size*0.015, 0, Math.PI*2);
+  ctx.fillStyle = '#20c997';
+  ctx.fill();
+  
+  const img = document.createElement('img');
+  img.src = canvas.toDataURL('image/png');
+  img.title = 'icon-' + size + 'x' + size + '.png';
+  img.style.margin = '10px';
+  
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = 'icon-' + size + 'x' + size + '.png';
+  link.textContent = size + 'x' + size;
+  link.style.display = 'block';
+  
+  const div = document.createElement('div');
+  div.style.display = 'inline-block';
+  div.style.textAlign = 'center';
+  div.appendChild(img);
+  div.appendChild(document.createElement('br'));
+  div.appendChild(link);
+  document.getElementById('icons').appendChild(div);
+});
+</script>
+</body>
+</html>

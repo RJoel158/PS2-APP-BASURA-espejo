@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import "./SuccessModal.css"
 import emailLogo from "../../assets/icons/email-logo.svg";
 
@@ -10,11 +11,13 @@ interface SuccessModalProps {
 }
 
 const SuccessModal: React.FC<SuccessModalProps> = ({ title, message, redirectUrl, onClose }) => {
+  const navigate = useNavigate();
+
   const handleClick = () => {
     if (onClose) {
       onClose(); // Si hay callback, usarlo
     } else if (redirectUrl) {
-      window.location.href = redirectUrl; // Si no, usar redirect
+      navigate(redirectUrl); // Si no, usar redirect
     }
   };
 

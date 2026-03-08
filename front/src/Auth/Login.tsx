@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Register.css";
 import inicioImage from "../assets/inicio.png";
 import cardBg from "../assets/SideBarImg.png";
@@ -24,6 +25,7 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   //Estado del modal de recuperacion
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const navigate = useNavigate();
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -68,16 +70,16 @@ const Login: React.FC = () => {
         //Redirección segun el rol
         switch (data.user.role) {
           case "admin":
-            window.location.href = "/adminDashboard";
+            navigate("/adminDashboard");
             break;
           case "recolector":
-            window.location.href = "/recolectorIndex";
+            navigate("/recolectorIndex");
             break;
           case "reciclador":
-            window.location.href = "/recicladorIndex";
+            navigate("/recicladorIndex");
             break;
           default:
-            window.location.href = "/main";
+            navigate("/main");
         }
       } else {
         console.error("Error de login:", data.error);
@@ -109,7 +111,7 @@ const Login: React.FC = () => {
     <div className="register-page d-flex align-items-stretch">
       {/* Lado izquierdo */}
       <div
-        className="register-left d-flex flex-column justify-content-center p-4"
+        className="register-left p-4"
         /* La imagen de fondo la manejamos por CSS con la variable cardBg (claro que aquí la dejamos inline para que funcione con webpack/CRA) */
         style={{
           backgroundImage: `linear-gradient(rgba(0,0,0,0.10), rgba(0,0,0,0.15)), url(${cardBg})`,
@@ -194,6 +196,7 @@ const Login: React.FC = () => {
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}
         initialEmail={form.email}/>
+
     </div>
   );
 };

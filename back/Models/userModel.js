@@ -139,47 +139,18 @@ export const checkEmailExists = async (email) => {
   return exists;
 };
 
-const insertUserWithRetry = async (conn, password, roleId, email, phone, state = 1, maxAttempts = 5) => {
-  let attempt = 0;
-  let lastErr = null;
-
+const insertUser = async (conn, password, roleId, email, phone, state = 1) => {
   roleId = await ensureRoleExists(conn, roleId);
 
-  while (attempt < maxAttempts) {
-    try {
-      console.log("[INFO] insertUserWithRetry - params:", { attempt, roleId, email, phone, state });
+  console.log("[INFO] insertUser - params:", { roleId, email, phone, state });
 
-      const [res] = await conn.query(
-        "INSERT INTO users (password, roleId, state, registerDate, email, phone) VALUES (?, ?, ?, NOW(), ?, ?)",
-        [password, roleId, state, email, phone]
-      );
+  const [res] = await conn.query(
+    "INSERT INTO users (password, roleId, state, registerDate, email, phone) VALUES (?, ?, ?, NOW(), ?, ?)",
+    [password, roleId, state, email, phone]
+  );
 
-      console.log("[INFO] insertUserWithRetry - success:", { insertId: res.insertId });
-      return { userId: res.insertId };
-    } catch (err) {
-      console.error("[ERROR] insertUserWithRetry - insert error:", {
-        attempt,
-        roleId,
-        email,
-        phone,
-        state,
-        errCode: err.code,
-        errno: err.errno,
-        sqlMessage: err.sqlMessage,
-        sql: err.sql,
-      });
-
-      if (err && err.code === "ER_DUP_ENTRY") {
-        lastErr = err;
-        attempt++;
-        continue;
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  throw lastErr || new Error("No se pudo insertar user tras varios intentos");
+  console.log("[INFO] insertUser - success:", { insertId: res.insertId });
+  return { userId: res.insertId };
 };
 
 export const createWithPersona = async (
@@ -201,7 +172,7 @@ export const createWithPersona = async (
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     // PASA EL STATE AQUÍ
-    const { userId } = await insertUserWithRetry(conn, hashedPassword, roleId, email, phone, state);
+    const { userId } = await insertUser(conn, hashedPassword, roleId, email, phone, state);
 
     // Crear persona con el mismo state
     const personId = await PersonModel.create(conn, firstname, lastname, userId, state);
@@ -251,7 +222,7 @@ export const createCollectorWithPersona = async (
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     // Crear usuario con estado 3 (pendiente de aprobación)
-    const { userId } = await insertUserWithRetry(conn, hashedPassword, roleId, email, phone, state);
+    const { userId } = await insertUser(conn, hashedPassword, roleId, email, phone, state);
 
     // Crear persona con estado 1 (activo)
     const personId = await PersonModel.create(conn, firstname, lastname, userId, 1);
@@ -573,19 +544,13 @@ export const approveUserWithInstitution = async (userId) => {
 
     // Generar NUEVA contraseña temporal para enviar por correo al aprobar
     const tempPassword = passwordGenerater(12);
-    console.log("[DEBUG] approveUserWithInstitution - password generado:", tempPassword);
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
-    console.log("[DEBUG] approveUserWithInstitution - password hasheado (primeros 20 chars):", hashedPassword.substring(0, 20));
 
     // Actualizar usuario: nueva contraseña y estado a 1 (activo, debe cambiar contraseña)
     await conn.query("UPDATE users SET password = ?, state = 1 WHERE id = ?", [hashedPassword, userId]);
 
     await conn.commit();
-    console.log("[INFO] approveUserWithInstitution - committed with new temp password", { 
-      userId, 
-      tempPasswordReturned: tempPassword,
-      tempPasswordLength: tempPassword.length
-    });
+    console.log("[INFO] approveUserWithInstitution - committed successfully", { userId });
     
     // Retornar datos con la nueva contraseña temporal para enviar por email
     return {

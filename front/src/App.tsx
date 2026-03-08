@@ -1,11 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-import Home from "./components/HomeComps/Home";
+import Index from "./components/IndexComp/Index";
 import Register from "./Auth/Register";
 import Login from "./Auth/Login";
 import RecicladorIndex from "./components/RecyclerComp/RecyclingInterface";
-import ResgisterCollector from "./Auth/registerCollector";
-import RegisterInstitution from "./Auth/registerInstitution";
 import UserInfo from "./components/UserInfoComp/UserInfoInterface";
 import RecolectorIndex from "./components/RecollectorComp/RecollectingInterface";
 import FormComp from "./components/FormComps/FormComp";
@@ -35,11 +33,12 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Rutas públicas */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Index />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/registerCollector" element={<ResgisterCollector/>} />
-        <Route path="/registerInstitution" element={<RegisterInstitution/>} />
+        {/* Rutas antiguas redireccionan al formulario unificado */}
+        <Route path="/registerCollector" element={<Navigate to="/register" replace />} />
+        <Route path="/registerInstitution" element={<Navigate to="/register" replace />} />
         
         {/* Rutas protegidas - Solo Reciclador (roleId: 3) */}
         <Route 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
 import '../UserManagementComp/UserManagement.css';
 import NotificationBell from '../CommonComp/NotificationBell';
@@ -10,14 +11,10 @@ interface User {
   state: number;
 }
 
-const handleLogout = () => {
-  localStorage.removeItem("user");
-  window.location.replace("/login");
-};
-
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -26,8 +23,13 @@ export default function Header() {
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login", { replace: true });
+  };
+
   const handleProfileClick = () => {
-    window.location.href = "/UserInfo";
+    navigate("/UserInfo");
   };
 
   return (

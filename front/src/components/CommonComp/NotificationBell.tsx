@@ -1,5 +1,6 @@
 // components/CommonComp/NotificationBell.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   connectNotifications,
   disconnectNotifications,
@@ -21,6 +22,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Conectar a Socket.IO y cargar notificaciones al montar
   useEffect(() => {
@@ -261,7 +263,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                               onClick={() => {
                                 const url = getNavigationUrl(notification);
                                 if (url) {
-                                  window.location.href = url;
+                                  navigate(url);
                                 }
                               }}
                             >
@@ -285,7 +287,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                   <button
                     className="notification-btn notification-btn-primary w-100"
                     style={{ marginTop: 8 }}
-                    onClick={() => window.location.href = '/notifications'}
+                    onClick={() => navigate('/notifications')}
                   >
                     Ver más
                   </button>

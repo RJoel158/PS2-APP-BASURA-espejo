@@ -8,8 +8,8 @@ import SchedulePickupModal from '../SchedulePickupComp/SchedulePickupModal';
 import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
-// Importar el icono existente de location.png
-import locationIcon from "../../assets/icons/location.png";
+// Importar el icono de marcador solicitado
+import locationIcon from "../../assets/icons/location3.png";
 
 // Crear icono personalizado usando el archivo existente
 const recyclingIcon = new L.Icon({

@@ -82,7 +82,7 @@ const UserInfo: React.FC = () => {
   };
   const handleLogout = () => {
     localStorage.removeItem("user"); // borra la sesión
-    window.location.replace("/login");// reemplaza la URL y evita volver atrás
+    navigate("/login", { replace: true });// reemplaza la URL y evita volver atrás
   };
 
   // Establecer si es institución o persona para mostrar nombre adecuado

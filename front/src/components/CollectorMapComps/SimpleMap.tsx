@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Map.css';
-import locationIcon from '../../assets/icons/location.png';
+import locationIcon from '../../assets/icons/location3.png';
 
 // Crear icono personalizado
 const customIcon = new L.Icon({

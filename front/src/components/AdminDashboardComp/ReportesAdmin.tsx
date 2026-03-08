@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import NotificationBell from '../CommonComp/NotificationBell';
 import SuccessModal from '../CommonComp/SuccesModal';
 import * as reportService from '../../services/reportService';
@@ -13,13 +13,9 @@ interface User {
   state: number;
 }
 
-const handleLogout = () => {
-  localStorage.removeItem("user");
-  window.location.replace("/login");
-};
-
 export default function ReportesAdmin() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -69,8 +65,13 @@ export default function ReportesAdmin() {
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login", { replace: true });
+  };
+
   const handleProfileClick = () => {
-    window.location.href = "/UserInfo";
+    navigate("/UserInfo");
   };
 
   // Obtener userId y rol del usuario autenticado

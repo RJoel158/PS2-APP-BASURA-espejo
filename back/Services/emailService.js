@@ -270,13 +270,11 @@ const getRejectionEmailTemplate = (nombre, apellidos, userType) => {
 
 // Función para enviar credenciales por email
 export const sendCredentialsEmail = async (to, nombre, apellidos, username, password, emailType=0) => {
-  console.log("[DEBUG] sendCredentialsEmail - INICIO", {
+  console.log("[INFO] sendCredentialsEmail - INICIO", {
     to,
     nombre,
     apellidos,
     username,
-    passwordReceived: password,
-    passwordLength: password?.length,
     emailType,
     timestamp: new Date().toISOString()
   });
@@ -299,7 +297,6 @@ export const sendCredentialsEmail = async (to, nombre, apellidos, username, pass
     });
 
     console.log(`✅ Email de credenciales ENVIADO EXITOSAMENTE a ${to}:`, info.messageId);
-    console.log(`[DEBUG] sendCredentialsEmail - Password en el email enviado: ${password}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("❌ Error enviando email de credenciales:", error);

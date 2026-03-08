@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // 👈 IMPORTA TU IMAGEN LOCAL (cambia 'tu-imagen.png' por el nombre real)
-import reciclajeIconImage from "../../assets/icons/location.png";
+import reciclajeIconImage from "../../assets/icons/location3.png";
 
 const reciclajeIcon = new L.Icon({
   iconUrl: reciclajeIconImage, // 👈 USA LA IMAGEN IMPORTADA

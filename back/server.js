@@ -49,8 +49,20 @@ const app = express();
 const server = createServer(app);
 
 // Configurar CORS usando variable de entorno
+// Soporta múltiples orígenes separados por coma para túneles/dev
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map(o => o.trim());
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.trycloudflare.com'))) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -58,7 +70,13 @@ const corsOptions = {
 // Configurar Socket.IO con CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.trycloudflare.com'))) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ["GET", "POST"]
   }
 });

@@ -1,6 +1,7 @@
 // CommonHeader.tsx - Componente de header reutilizable para todos los módulos de administración
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 import '../UserManagementComp/UserManagement.css';
 
@@ -21,11 +22,6 @@ interface User {
   state: number;
 }
 
-const handleLogout = () => {
-  localStorage.removeItem("user");
-  window.location.replace("/login");
-};
-
 export default function CommonHeader({ 
   title,
   searchPlaceholder,
@@ -37,6 +33,7 @@ export default function CommonHeader({
 }: CommonHeaderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -45,8 +42,13 @@ export default function CommonHeader({
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login", { replace: true });
+  };
+
   const handleProfileClick = () => {
-    window.location.href = "/UserInfo";
+    navigate("/UserInfo");
   };
 
   return (

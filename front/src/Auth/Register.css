@@ -20,9 +20,9 @@ html, body, #root {
 /* Layout principal */
 .register-page {
   display: flex;
+  min-height: 100vh;
   height: 100vh;
   width: 100%;
-  overflow: hidden;
 }
 
 /* Lado izquierdo: formulario */
@@ -31,10 +31,12 @@ html, body, #root {
   width: 100%;
   background: #f6fbf4;
   border-right: 2px solid rgba(74,124,89,.25);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow-y: auto; /* Permitir scroll si el contenido es muy largo */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  overflow-y: auto;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
 }
 
 /* Tarjeta del formulario */
@@ -73,6 +75,27 @@ html, body, #root {
   box-shadow: 0 0 0 .2rem rgba(127,176,105,.15);
   outline: none;
 }
+
+/* Selects del formulario (rol, tipo cuenta) */
+.auth-form .form-select {
+  border: 2px solid #e4e9e4;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  background-color: #fff;
+  color: #333;
+}
+.auth-form .form-select:focus {
+  border-color: var(--verde-claro);
+  box-shadow: 0 0 0 .2rem rgba(127,176,105,.15);
+  outline: none;
+}
+
+.auth-form .form-label {
+  margin-bottom: 4px;
+}
+
 .auth-form .is-invalid {
   border-color: var(--error) !important;
 }

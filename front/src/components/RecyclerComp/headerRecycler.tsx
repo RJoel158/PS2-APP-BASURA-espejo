@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import "./RecyclingInterface.css";
 import logoText from "../../assets/logoText.svg";
 import NotificationBell from "../CommonComp/NotificationBell";
@@ -16,12 +17,15 @@ interface HeaderProps {
   user: User | null;
 }
 
-const handleLogout = () => {
-  localStorage.removeItem("user"); // borra la sesión
-  window.location.replace("/login"); // reemplaza la URL y evita volver atrás
-};
 //Paso el usuario como prop
 const Header: React.FC<HeaderProps> = ({ user }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("user"); // borra la sesión
+    navigate("/login", { replace: true }); // reemplaza la URL y evita volver atrás
+  };
+
   return (
     <header className="header d-flex justify-content-between align-items-center px-3">
       <div 

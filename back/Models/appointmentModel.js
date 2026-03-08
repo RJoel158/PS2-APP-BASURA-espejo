@@ -15,7 +15,7 @@ export const create = async (conn, userId, institutionId, date, description) => 
 export const getAll = async () => {
   const [rows] = await db.query(`
     SELECT a.id, a.date, a.description, a.status,
-           COALESCE(u.username, 'N/A') AS collector,
+           COALESCE(u.email, 'N/A') AS collector,
            COALESCE(i.name, 'N/A') AS institution
     FROM appointments a
     LEFT JOIN users u ON a.user_id = u.id

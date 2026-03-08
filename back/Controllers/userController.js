@@ -106,16 +106,14 @@ export const loginUser = async (req, res) => {
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) {
       console.warn("[WARN] loginUser - invalid password for", { email });
-      console.log("[DEBUG] Password length:", password.length, "Hash starts:", user.password.substring(0, 10));
-      return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
+        return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
     }
 
-    console.log("[INFO] Login successful for", { email, username: user.username });
+    console.log("[INFO] Login successful for", { email });
     res.json({
       success: true,
       user: {
         id: user.id,
-        username: user.username,
         email: user.email,
         role: user.role,
         state: user.state,
@@ -873,7 +871,7 @@ export const approveInstitution = async (req, res) => {
     // Enviar email con las credenciales (AHORA sí se envía)
     if (userData.companyName && userData.email && userData.tempPassword) {
       try {
-        console.log("[DEBUG] approveInstitution - ANTES de enviar email con password:", userData.tempPassword);
+        console.log("[INFO] approveInstitution - enviando email de credenciales a:", userData.email);
         const emailStartTime = Date.now();
         
         // Enviar email de forma NO bloqueante (no esperar a que termine)
@@ -885,7 +883,7 @@ export const approveInstitution = async (req, res) => {
           userData.tempPassword     // password: contraseña temporal NUEVA
         ).then(() => {
           console.log(`[TIMING] Email enviado exitosamente en: ${Date.now() - emailStartTime}ms`);
-          console.log(`✅ Email de credenciales enviado a ${userData.email} con password: ${userData.tempPassword}`);
+          console.log(`✅ Email de credenciales enviado a ${userData.email}`);
         }).catch(emailError => {
           console.error("⚠️ No se pudo enviar el email de credenciales:", emailError.message);
         });

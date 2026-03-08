@@ -6,12 +6,21 @@ import dotenv from "dotenv";
 // Cargar variables de entorno
 dotenv.config();
 
+// Validar variables de entorno requeridas
+const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ Variables de entorno de BD faltantes: ${missingVars.join(', ')}`);
+  console.error('Copia .env.example a .env y configura las credenciales de la base de datos.');
+  process.exit(1);
+}
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "mysql-reciclaje.alwaysdata.net",
+  host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || "reciclaje",
-  password: process.env.DB_PASSWORD || "reciclaje2024*",
-  database: process.env.DB_NAME || "reciclaje_365377",
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0
