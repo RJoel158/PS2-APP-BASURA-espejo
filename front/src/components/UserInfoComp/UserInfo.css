@@ -17,22 +17,37 @@
 
 .header {
   width: 100%;
-  height: 90px; 
+  min-height: 90px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-image: url("../../assets/Cardboard.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  padding: 0 1rem;
+  background-color: #2a5d3f;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 10px 20px;
   color: white;
 }
 
 
+.header-logo-container {
+  width: 350px;
+  height: 100px;
+  min-width: 350px;
+  display: flex;
+  align-items: center;
+}
+
 .logo-img {
-  max-width: 150px !important;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+  max-width: none !important;
+  max-height: none;
+}
+
+.header-spacer {
+  width: 350px;
+  min-width: 350px;
 }
 
 
