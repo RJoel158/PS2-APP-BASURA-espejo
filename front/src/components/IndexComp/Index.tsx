@@ -6,7 +6,7 @@ import PWAInstallButton from '../PWA/PWAInstallButton';
 import centerLogo from '../../res/centerLogo.png';
 
 const M = 'RECICLA ✦ RECOLECTA ✦ REDUCE ✦ ';
-const MARQUEE = M + M + M + M;
+const MARQUEE = M + M;
 const TITLE = 'GreenBit';
 
 export default function Index() {
