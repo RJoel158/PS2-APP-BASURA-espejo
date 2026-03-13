@@ -195,14 +195,14 @@
 .lp-marquee {
   display: flex;
   white-space: nowrap;
-  animation: lp-scroll-smooth 150s linear infinite !important;
-  animation-duration: 150s !important;
+  animation: lp-scroll-smooth 25s linear infinite !important;
+  animation-duration: 25s !important;
   width: max-content;
   will-change: transform;
 }
 .lp-marquee--rev { 
   animation-name: lp-scroll-smooth-rev !important;
-  animation-duration: 150s !important;
+  animation-duration: 25s !important;
 }
 
 .lp-marquee span {

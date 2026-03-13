@@ -5,8 +5,8 @@ export interface CreateScoreData {
   appointmentId: number;
   ratedByUserId: number;
   ratedToUserId: number;
-  score: number;
-  comment?: string;
+  rating?: number;  // OPCIONAL: estrellas 1-5
+  comment?: string; // OPCIONAL
 }
 
 export interface Score {
@@ -14,7 +14,8 @@ export interface Score {
   appointmentConfirmationId: number;
   ratedByUserId: number;
   ratedToUserId: number;
-  score: number;
+  rating: number | null;      // Puede ser NULL
+  score: number;              // Puntos calculados
   comment: string | null;
   createdDate: string;
   state: number;
@@ -22,9 +23,14 @@ export interface Score {
   ratedName: string;
 }
 
+export interface UserScore {
+  userId: number;
+  totalScore: number;         // Suma de todos los puntos
+}
+
 export interface UserRating {
-  totalRatings: number;
-  averageScore: number;
+  averageRating: number;      // Promedio de estrellas
+  totalRatings: number;       // Cantidad de ratings recibidos
 }
 
 /**
@@ -68,6 +74,19 @@ export const getAppointmentScores = async (appointmentId: number): Promise<Score
   } catch (error) {
     console.error('[scoreService] Error getting appointment scores:', error);
     return [];
+  }
+};
+
+/**
+ * Obtener puntaje total acumulado de un usuario
+ */
+export const getUserTotalScore = async (userId: number): Promise<UserScore> => {
+  try {
+    const response = await api.get(`/api/score/user/${userId}/total`);
+    return response.data.data;
+  } catch (error) {
+    console.error('[scoreService] Error getting total score:', error);
+    return { userId, totalScore: 0 };
   }
 };
 

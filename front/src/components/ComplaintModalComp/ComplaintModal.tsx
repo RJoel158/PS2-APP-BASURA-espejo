@@ -64,7 +64,7 @@ const ComplaintModal: React.FC<ComplaintModalProps> = ({
         appointmentId,
         ratedByUserId: currentUser.id,
         ratedToUserId,
-        score: 1, // Score = 1 para reclamos (mínimo permitido)
+        rating: 1, // Rating mínimo para reclamos (1 estrella)
         comment: `[RECLAMO] ${complaint}`
       });
 

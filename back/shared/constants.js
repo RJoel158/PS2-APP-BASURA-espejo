@@ -76,3 +76,38 @@ export const getRequestStateLabel = (state) => {
 export const getAppointmentStateLabel = (state) => {
   return APPOINTMENT_STATE_LABELS[parseInt(state)] || 'Desconocido';
 };
+
+/**
+ * Constantes del sistema de puntuación/calificación
+ * 
+ * Sistema dual:
+ * - rating: Calificación en estrellas (1-5) que un usuario da a otro
+ * - score: Puntos acumulados para el ranking
+ * 
+ * Fórmula: score = BASE_POINTS + rating (si hay rating)
+ *          score = BASE_POINTS (si no hay rating)
+ */
+export const SCORE_CONSTANTS = {
+  BASE_POINTS: 10,      // Puntos base por cita completada
+  MIN_RATING: 1,        // Mínimo de estrellas
+  MAX_RATING: 5         // Máximo de estrellas
+};
+
+/**
+ * Función para calcular score basado en rating
+ */
+export const calculateScore = (rating = null) => {
+  if (rating !== null && rating !== undefined) {
+    return SCORE_CONSTANTS.BASE_POINTS + parseInt(rating);
+  }
+  return SCORE_CONSTANTS.BASE_POINTS;
+};
+
+/**
+ * Función para validar rating
+ */
+export const isValidRating = (rating) => {
+  if (rating === null || rating === undefined) return true; // Rating es opcional
+  const r = parseInt(rating);
+  return r >= SCORE_CONSTANTS.MIN_RATING && r <= SCORE_CONSTANTS.MAX_RATING;
+};

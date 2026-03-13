@@ -4,6 +4,7 @@ import HeaderUserInfo from "./HeaderUserInfo";
 import { useNavigate } from "react-router-dom";
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
+import { getUserTotalScore, getUserAverageRating } from '../../services/scoreService';
 
 //Estructura del usuario
 interface User {
@@ -12,7 +13,9 @@ interface User {
   phone: string;
   registerDate: string;
   avatar?: string;
-  score?: number;
+  totalScore?: number;        // Puntaje total acumulado (para rankings)
+  averageRating?: number;     // Promedio de estrellas (1-5)
+  totalRatings?: number;      // Cantidad de ratings recibidos
   roleId?: number;
   state?: number;
   // Campos de Persona
@@ -30,6 +33,26 @@ const UserInfo: React.FC = () => {
   const [role, setRole] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const navigate=useNavigate();
+
+  // Función para cargar puntajes del usuario
+  const loadUserScores = async (userId: number) => {
+    try {
+      // Cargar puntaje total acumulado
+      const scoreData = await getUserTotalScore(userId);
+      
+      // Cargar promedio de rating
+      const ratingData = await getUserAverageRating(userId);
+      
+      setUser(prevUser => prevUser ? {
+        ...prevUser,
+        totalScore: scoreData.totalScore,
+        averageRating: ratingData.averageRating,
+        totalRatings: ratingData.totalRatings
+      } : null);
+    } catch (error) {
+      console.error('Error al cargar puntajes:', error);
+    }
+  };
 
   useEffect(() => {
     
@@ -51,6 +74,8 @@ const UserInfo: React.FC = () => {
             // Si firstname y lastname no son null, es persona
             if (response.data.user.firstname !== null && response.data.user.lastname !== null) {
               setUser(response.data.user);
+              // Cargar puntaje total y promedio de rating
+              loadUserScores(userId);
               setLoading(false);
             } else {
               // firstname y lastname son null, intentar como institución
@@ -58,6 +83,8 @@ const UserInfo: React.FC = () => {
                 .then((institutionResponse) => {
                   if (institutionResponse.data.success && institutionResponse.data.user) {
                     setUser(institutionResponse.data.user);
+                    // Cargar puntaje total y promedio de rating
+                    loadUserScores(userId);
                   }
                   setLoading(false);
                 })
@@ -207,15 +234,29 @@ const UserInfo: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label>Total de Puntos:</label>
+              <label>Puntos Totales (Ranking):</label>
               <div className="points-input d-flex align-items-center">
                 <input
                   type="text"
                   className="form-control form-input"
-                  value={user?.score || 0}
+                  value={user?.totalScore !== undefined ? user.totalScore : 0}
                   readOnly
                 />
-               
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Calificación Promedio:</label>
+              <div className="rating-display d-flex align-items-center gap-2">
+                <span className="stars">
+                  {'⭐'.repeat(Math.round(user?.averageRating || 0))}
+                </span>
+                <span className="rating-text">
+                  {user?.averageRating?.toFixed(2) || '0.00'} / 5.00
+                </span>
+                <span className="rating-count text-muted">
+                  ({user?.totalRatings || 0} calificaciones)
+                </span>
               </div>
             </div>
           </div>

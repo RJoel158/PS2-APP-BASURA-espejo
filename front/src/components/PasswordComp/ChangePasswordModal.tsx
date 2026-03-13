@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./ChangePasswordModal.css";
 import { Validator } from "../../common/Validator";
 import SuccessModal from "../CommonComp/SuccesModal";
@@ -11,6 +12,8 @@ interface ChangePasswordModalProps {
 }
 
 const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ userId, role }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [errors, setErrors] = useState<{ password?: string; repeatPassword?: string }>({});
@@ -18,6 +21,39 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ userId, role 
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState("");
+
+  const redirectUrl = useMemo(() => {
+    const normalizedRole = (role || "").toLowerCase();
+    if (normalizedRole === "admin" || normalizedRole === "administrador") return "/adminDashboard";
+    if (normalizedRole === "reciclador") return "/recicladorIndex";
+    if (normalizedRole === "recolector") return "/recolectorIndex";
+
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const roleId = Number(user?.roleId);
+        if (roleId === 1) return "/adminDashboard";
+        if (roleId === 3) return "/recicladorIndex";
+        if (roleId === 2) return "/recolectorIndex";
+      } catch {
+        // Si falla el parseo, usar fallback por defecto.
+      }
+    }
+
+    return "/recolectorIndex";
+  }, [role]);
+
+  const handleSuccessClose = () => {
+    setIsSuccessModalOpen(false);
+
+    // Si ya estamos en la ruta destino, cerrar el modal es suficiente.
+    if (location.pathname === redirectUrl) {
+      return;
+    }
+
+    navigate(redirectUrl, { replace: true });
+  };
 
   const handleConfirm = async () => {
 
@@ -55,8 +91,8 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ userId, role 
   return (
     <>
       {isChangePasswordOpen && (
-        <div className="modal-overlay d-flex justify-content-center align-items-center">
-          <div className="modal-box text-center shadow">
+        <div className="password-modal-overlay d-flex justify-content-center align-items-center">
+          <div className="password-modal-box text-center shadow">
             <h2 className="mb-2">¡Bienvenid@!</h2>
             <h4 className="mb-4">Como último paso, personaliza tu contraseña.</h4>
 
@@ -97,15 +133,8 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ userId, role 
         <SuccessModal
           title="¡Contraseña actualizada!"
           message="Tu contraseña ha sido cambiada exitosamente."
-          redirectUrl={
-            role === "admin"
-              ? "/adminDashboard"
-              : role === "recolector"
-              ? "/recolectorIndex"
-              : role === "reciclador"
-              ? "/recicladorIndex" 
-              : "/recolectorIndex"
-          }
+          redirectUrl={redirectUrl}
+          onClose={handleSuccessClose}
         />
       )}
 

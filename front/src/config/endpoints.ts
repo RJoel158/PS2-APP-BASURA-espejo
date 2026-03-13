@@ -104,7 +104,9 @@ export const API_ENDPOINTS = {
     GET_BY_APPOINTMENT: (appointmentId: number) => 
       `/api/score/appointment/${appointmentId}`,                // GET - Por cita
     GET_USER_AVERAGE: (userId: number) => 
-      `/api/score/user/${userId}/average`,                      // GET - Promedio del usuario
+      `/api/score/user/${userId}/average`,                      // GET - Promedio de rating (estrellas)
+    GET_USER_TOTAL: (userId: number) =>                         // GET - Puntaje total acumulado
+      `/api/score/user/${userId}/total`,
   },
 
   // ============================================
