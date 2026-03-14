@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './SchedulePickup.css';
 import SuccessModal from '../CommonComp/SuccesModal';
 import ImageCarousel from './ImageCarousel';
+import ReportRequestModal from './ReportRequestModal.tsx';
 import { debugLog } from '../../config/environment';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
@@ -56,6 +57,8 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
   const [errorModalMessage, setErrorModalMessage] = useState<string>('');
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [showReportSuccessModal, setShowReportSuccessModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false); // Estado para bloquear botón durante submit
   const [error, setError] = useState<string | null>(null);
@@ -230,6 +233,20 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
     }
   };
 
+  const handleOpenReportModal = () => {
+    setShowReportModal(true);
+  };
+
+  const handleReportClose = () => {
+    setShowReportModal(false);
+  };
+
+  const handleSubmitReport = () => {
+  
+    setShowReportModal(false);
+    setShowReportSuccessModal(true);
+  };
+
   const handleConfirm = async () => {
     // Validar que se haya ingresado una hora
     if (!selectedTime) {
@@ -401,9 +418,18 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
 
                 <>
                   <div className="card-header text-center mb-2">
-                    <h4 className="pickup-title">
-                      Reciclaje de {requestData.name}
-                    </h4>
+                    <div className="pickup-title-row">
+                      <h4 className="pickup-title">
+                        Reciclaje de {requestData.name}
+                      </h4>
+                      <button
+                        type="button"
+                        className="report-trigger-btn"
+                        onClick={handleOpenReportModal}
+                      >
+                        Reportar
+                      </button>
+                    </div>
                   </div>
 
                   <ImageCarousel
@@ -523,6 +549,12 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
         </div>
       </div>
 
+      <ReportRequestModal
+        show={showReportModal}
+        onClose={handleReportClose}
+        onSubmit={handleSubmitReport}
+      />
+
       {/* Modal de confirmación exitosa */}
       {showSuccess && requestData && (
         <SuccessModal
@@ -538,6 +570,15 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
           title="❌ Error"
           message={errorModalMessage}
           onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
+      {/* Confirmación de reporte */}
+      {showReportSuccessModal && (
+        <SuccessModal
+          title="Reporte registrado"
+          message="Gracias por reportar. Se revisará el la solicitud."
+          onClose={() => setShowReportSuccessModal(false)}
         />
       )}
     </>
