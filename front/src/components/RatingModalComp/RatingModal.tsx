@@ -65,7 +65,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
         appointmentId,
         ratedByUserId: currentUser.id,
         ratedToUserId,
-        score: rating,
+        rating: rating,  // ✅ Enviar rating (estrellas) en lugar de score
         comment: comment || undefined
       });
 

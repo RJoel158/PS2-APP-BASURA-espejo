@@ -195,10 +195,15 @@
 .lp-marquee {
   display: flex;
   white-space: nowrap;
-  animation: lp-scroll 25s linear infinite;
+  animation: lp-scroll-smooth 25s linear infinite !important;
+  animation-duration: 25s !important;
   width: max-content;
+  will-change: transform;
 }
-.lp-marquee--rev { animation-direction: reverse; }
+.lp-marquee--rev { 
+  animation-name: lp-scroll-smooth-rev !important;
+  animation-duration: 25s !important;
+}
 
 .lp-marquee span {
   color: #fff;
@@ -209,9 +214,14 @@
   padding: 0 8px;
 }
 
-@keyframes lp-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+@keyframes lp-scroll-smooth {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes lp-scroll-smooth-rev {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
 }
 
 /* ─────────── HERO ─────────── */
@@ -373,9 +383,29 @@
    Respetar preferencia de movimiento reducido
    ═══════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
+  .lp-marquee {
+    animation: none !important;
+  }
+  
+  .lp-anim-band-top,
+  .lp-anim-band-bot,
+  .lp-anim-logo,
+  .lp-anim-subtitle,
+  .lp-anim-cta,
+  .lp-anim-login,
+  .lp-title-char {
+    animation-duration: 0.3s !important;
     animation-delay: 0s !important;
-    transition-duration: 0.01ms !important;
+  }
+  
+  .lp-loader-bounce,
+  .lp-loader-fade,
+  .lp-spinner {
+    animation-duration: 0.5s !important;
+  }
+  
+  * {
+    transition-duration: 0.2s !important;
   }
 }
+

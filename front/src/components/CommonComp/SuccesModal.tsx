@@ -22,14 +22,15 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ title, message, redirectUrl
   };
 
   return (
-    <div className="modal-overlay d-flex justify-content-center align-items-center">
-      <div className="modal-box p-4 text-center">
-        <img src={emailLogo} alt="Email" className="modal-icon mb-3" />
+    <div className="success-modal-overlay d-flex justify-content-center align-items-center">
+      <div className="success-modal-box p-4 text-center">
+        <img src={emailLogo} alt="Email" className="success-modal-icon mb-3" />
         <h2 className="mb-2">{title}</h2>
         <h3 className="mb-3">{message}</h3>
         <div className="d-flex justify-content-end">
           <button
-            className="btn modal-button"
+            type="button"
+            className="btn success-modal-button"
             onClick={handleClick}
           >
             Aceptar

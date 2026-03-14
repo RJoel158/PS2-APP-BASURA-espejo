@@ -15,6 +15,9 @@ router.get('/check/:appointmentId/:userId', scoreController.checkUserRated);
 // Obtener calificaciones de una cita
 router.get('/appointment/:appointmentId', scoreController.getAppointmentScores);
 
+// Obtener puntaje total acumulado de un usuario
+router.get('/user/:userId/total', scoreController.getUserTotalScore);
+
 // Obtener promedio de calificaciones de un usuario
 router.get('/user/:userId/average', scoreController.getUserAverageRating);
 
