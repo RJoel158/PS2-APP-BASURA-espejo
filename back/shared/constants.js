@@ -10,7 +10,9 @@ export const REQUEST_STATE = {
   ACCEPTED: 2,    // Reciclador aceptó la solicitud del recolector
   REJECTED: 3,    // Reciclador rechazó la solicitud del recolector
   CLOSED: 4,      // Recolección completada
-  CANCELLED: 5    // Cancelado por alguna de las partes
+  CANCELLED: 5,    // Cancelado por alguna de las partes
+  REPORTED: 6     // Reportado y eliminado (estado especial para reportes)
+
 };
 
 /**
@@ -34,7 +36,9 @@ export const REQUEST_STATE_LABELS = {
   [REQUEST_STATE.ACCEPTED]: 'Aceptado',
   [REQUEST_STATE.REJECTED]: 'Rechazado',
   [REQUEST_STATE.CLOSED]: 'Cerrado',
-  [REQUEST_STATE.CANCELLED]: 'Cancelado'
+  [REQUEST_STATE.CANCELLED]: 'Cancelado',
+  [REQUEST_STATE.REPORTED]: 'Reportado'
+
 };
 
 /**

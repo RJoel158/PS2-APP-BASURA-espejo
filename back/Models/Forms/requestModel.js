@@ -75,8 +75,10 @@ export const getById = async (id) => {
     const [rows] = await db.query(
       `SELECT r.id, r.idUser, r.description, r.state, r.registerDate, r.materialId, 
               r.latitude, r.longitude, r.modificationDate,
+              u.email as userEmail,
               m.name as materialName
        FROM request r
+       LEFT JOIN users u ON r.idUser = u.id
        LEFT JOIN material m ON r.materialId = m.id
        WHERE r.id = ?`,
       [id]

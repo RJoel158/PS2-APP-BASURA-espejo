@@ -146,6 +146,41 @@ export const getReportsByProsecutor = async (prosecutorId) => {
 };
 
 /**
+ * Obtener todos los reportes para vista administrativa
+ * @returns {Promise<Array>}
+ */
+export const getAllReports = async () => {
+	try {
+		const query = `
+			SELECT
+				r.id,
+				r.reason,
+				r.description,
+				r.requestId,
+				r.prosecutorId,
+				r.reportedAt,
+				r.state,
+				u.email as prosecutorEmail,
+				COALESCE(CONCAT(p.firstname, ' ', p.lastname), u.email) as prosecutorName,
+				m.name as materialName,
+				req.description as requestDescription
+			FROM report_info r
+			LEFT JOIN users u ON r.prosecutorId = u.id
+			LEFT JOIN person p ON p.userId = u.id
+			LEFT JOIN request req ON req.id = r.requestId
+			LEFT JOIN material m ON m.id = req.materialId
+			ORDER BY r.requestId DESC, r.reportedAt DESC
+		`;
+
+		const [rows] = await db.query(query);
+		return rows;
+	} catch (err) {
+		console.error('[ERROR] ReportModel.getAllReports:', err);
+		throw err;
+	}
+};
+
+/**
  * Obtener un reporte por ID
  * @param {number} reportId
  * @returns {Promise<Object|null>}

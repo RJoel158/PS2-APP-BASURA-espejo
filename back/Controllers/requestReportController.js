@@ -50,6 +50,27 @@ export const createReport = async (req, res) => {
 };
 
 /**
+ * Obtener todos los reportes (vista admin)
+ * GET /api/request-reports
+ */
+export const getAllReports = async (req, res) => {
+	try {
+		const reports = await RequestReportModel.getAllReports();
+
+		res.json({
+			success: true,
+			data: reports
+		});
+	} catch (error) {
+		console.error('[ERROR] requestReportController.getAllReports:', error);
+		res.status(500).json({
+			success: false,
+			error: 'Error al obtener reportes'
+		});
+	}
+};
+
+/**
  * Obtener un reporte por ID
  * GET /api/request-reports/:id
  */

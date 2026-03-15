@@ -156,6 +156,7 @@ export const API_ENDPOINTS = {
   // REPORTES DE SOLICITUD - /api/request-reports
   // ============================================
   REQUEST_REPORTS: {
+    GET_ALL: '/api/request-reports',                                                              // GET - Obtener todos (admin)
     CREATE: '/api/request-reports',                                                              // POST - Crear reporte
     GET_BY_ID: (reportId: number) => `/api/request-reports/${reportId}`,                         // GET - Por ID
     GET_BY_REQUEST: (requestId: number) => `/api/request-reports/request/${requestId}`,          // GET - Por solicitud

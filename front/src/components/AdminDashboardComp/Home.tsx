@@ -10,6 +10,7 @@ import TopCollectors from './TopCollectors';
 import MaterialesAdmin from './MaterialesAdmin';
 import AnnouncementsAdmin from './AnnouncementsAdmin';
 import ReportesAdmin from './ReportesAdmin';
+import DenunciasAdmin from './ReportInfoAdmin';
 import UserManagement from '../UserManagementComp/UserManagement';
 import CollectorRequests from '../CollectorRequestsComp/CollectorRequests';
 import RankingPeriodsAdmin from './RankingPeriodsAdmin';
@@ -57,7 +58,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const menuFromQuery = searchParams.get('menu');
     // Si no viene un valor válido en la URL usar 'control'
-    const validMenus = ['control', 'reportes', 'usuarios', 'materiales', 'anuncios', 'accesos', 'ranking'];
+    const validMenus = ['control', 'reportes', 'denuncias', 'usuarios', 'materiales', 'anuncios', 'accesos', 'ranking'];
     if (menuFromQuery && validMenus.includes(menuFromQuery)) {
       setActiveMenu(menuFromQuery);
     } else {
@@ -114,6 +115,8 @@ export default function AdminDashboard() {
         );
       case 'reportes':
         return <ReportesAdmin />;
+      case 'denuncias':
+        return <DenunciasAdmin />;
       case 'materiales':
         return <MaterialesAdmin />;
       case 'anuncios':

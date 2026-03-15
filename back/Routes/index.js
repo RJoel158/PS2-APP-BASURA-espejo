@@ -217,6 +217,7 @@ router.get('/reports/recolecciones', reportController.getRecolectionsReport);
 // ==========================================
 // REPORTES DE SOLICITUD (6 rutas)
 // ==========================================
+router.get('/request-reports', requestReportController.getAllReports);
 router.post('/request-reports', requestReportController.createReport);
 router.get('/request-reports/check/:requestId/:prosecutorId', requestReportController.checkUserReported);
 router.get('/request-reports/request/:requestId', requestReportController.getReportsByRequest);

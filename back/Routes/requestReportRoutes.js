@@ -3,6 +3,9 @@ import * as requestReportController from '../Controllers/requestReportController
 
 const router = express.Router();
 
+// Obtener todos los reportes (admin)
+router.get('/', requestReportController.getAllReports);
+
 // Crear un reporte
 router.post('/', requestReportController.createReport);
 

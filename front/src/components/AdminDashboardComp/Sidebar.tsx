@@ -16,6 +16,7 @@ export default function Sidebar({ onMenuSelect, activeMenu, isOpen, onClose }: S
   const menuItems = [
     { id: 'control', label: 'Panel de Control', icon: 'bi-grid-fill' },
     { id: 'reportes', label: 'Reportes', icon: 'bi-graph-up' },
+    { id: 'denuncias', label: 'Denuncias', icon: 'bi-exclamation-octagon-fill' },
     { id: 'usuarios', label: 'Administrar Usuarios', icon: 'bi-people-fill' },
     { id: 'materiales', label: 'Materiales', icon: 'bi-recycle' },
     { id: 'anuncios', label: 'Anuncios', icon: 'bi-megaphone-fill' },
