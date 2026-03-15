@@ -41,6 +41,7 @@ import * as announcementController from '../Controllers/announcementController.j
 import * as uploadController from '../Controllers/uploadController.js';
 import rankingController from '../Controllers/rankingController.js';
 import * as reportController from '../Controllers/reportController.js';
+import * as requestReportController from '../Controllers/requestReportController.js';
 
 // Configuración de multer para uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -212,6 +213,16 @@ router.post('/ranking/periods', rankingController.createPeriod);
 router.get('/reports/materiales', reportController.getMaterialesReport);
 router.get('/reports/scores', reportController.getScoresReport);
 router.get('/reports/recolecciones', reportController.getRecolectionsReport);
+
+// ==========================================
+// REPORTES DE SOLICITUD (6 rutas)
+// ==========================================
+router.post('/request-reports', requestReportController.createReport);
+router.get('/request-reports/check/:requestId/:prosecutorId', requestReportController.checkUserReported);
+router.get('/request-reports/request/:requestId', requestReportController.getReportsByRequest);
+router.get('/request-reports/prosecutor/:prosecutorId', requestReportController.getReportsByProsecutor);
+router.get('/request-reports/:id', requestReportController.getReportById);
+router.delete('/request-reports/:id', requestReportController.deleteReport);
 
 // ==========================================
 // SISTEMA (1 ruta)

@@ -153,6 +153,18 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================
+  // REPORTES DE SOLICITUD - /api/request-reports
+  // ============================================
+  REQUEST_REPORTS: {
+    CREATE: '/api/request-reports',                                                              // POST - Crear reporte
+    GET_BY_ID: (reportId: number) => `/api/request-reports/${reportId}`,                         // GET - Por ID
+    GET_BY_REQUEST: (requestId: number) => `/api/request-reports/request/${requestId}`,          // GET - Por solicitud
+    GET_BY_PROSECUTOR: (prosecutorId: number) => `/api/request-reports/prosecutor/${prosecutorId}`, // GET - Mis reportes
+    CHECK: (requestId: number, prosecutorId: number) => `/api/request-reports/check/${requestId}/${prosecutorId}`, // GET - Ya reporté?
+    DELETE: (reportId: number) => `/api/request-reports/${reportId}`,                            // DELETE - Soft delete
+  },
+
+  // ============================================
   // SISTEMA
   // ============================================
   SYSTEM: {

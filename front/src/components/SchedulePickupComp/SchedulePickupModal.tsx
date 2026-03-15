@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './SchedulePickup.css';
 import SuccessModal from '../CommonComp/SuccesModal';
 import ImageCarousel from './ImageCarousel';
-import ReportRequestModal from './ReportRequestModal.tsx';
+import ReportRequestModal from '../ReportModalComp/ReportRequestModal.tsx';
 import { debugLog } from '../../config/environment';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
@@ -59,8 +59,11 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
   const [errorModalMessage, setErrorModalMessage] = useState<string>('');
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [showReportSuccessModal, setShowReportSuccessModal] = useState<boolean>(false);
+  const [showReportInfoModal, setShowReportInfoModal] = useState<boolean>(false);
+  const [reportInfoMessage, setReportInfoMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false); // Estado para bloquear botón durante submit
+  const [checkingReportStatus, setCheckingReportStatus] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [requestData, setRequestData] = useState<RequestData | null>(null);
   const [daysAvailability, setDaysAvailability] = useState<DayAvailability[]>([]);
@@ -233,8 +236,56 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
     }
   };
 
-  const handleOpenReportModal = () => {
-    setShowReportModal(true);
+  const handleOpenReportModal = async () => {
+    if (checkingReportStatus) return;
+
+    const userString = localStorage.getItem('user');
+    if (!userString) {
+      setReportInfoMessage('No se encontró información del usuario. Por favor inicia sesión nuevamente.');
+      setShowReportInfoModal(true);
+      return;
+    }
+
+    let prosecutorId: number | undefined;
+    try {
+      const currentUser = JSON.parse(userString);
+      prosecutorId = currentUser.id;
+    } catch {
+      setReportInfoMessage('No se pudo validar la sesión actual. Vuelve a iniciar sesión.');
+      setShowReportInfoModal(true);
+      return;
+    }
+
+    if (!prosecutorId) {
+      setReportInfoMessage('No se pudo obtener el ID del usuario.');
+      setShowReportInfoModal(true);
+      return;
+    }
+
+    setCheckingReportStatus(true);
+
+    try {
+      const response = await api.get(
+        API_ENDPOINTS.REQUEST_REPORTS.CHECK(selectedRequest.id, prosecutorId)
+      );
+
+      const hasReported = response?.data?.data?.hasReported === true;
+
+      if (hasReported) {
+        setReportInfoMessage('Ya reportaste esta solicitud anteriormente.');
+        setShowReportInfoModal(true);
+        return;
+      }
+
+      setShowReportModal(true);
+    } catch (err: any) {
+      console.error('[ERROR] SchedulePickupModal.handleOpenReportModal:', err);
+      const backendMessage = err?.response?.data?.error;
+      setReportInfoMessage(backendMessage || 'No se pudo validar el estado del reporte. Intenta nuevamente.');
+      setShowReportInfoModal(true);
+    } finally {
+      setCheckingReportStatus(false);
+    }
   };
 
   const handleReportClose = () => {
@@ -242,7 +293,6 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
   };
 
   const handleSubmitReport = () => {
-  
     setShowReportModal(false);
     setShowReportSuccessModal(true);
   };
@@ -426,8 +476,9 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
                         type="button"
                         className="report-trigger-btn"
                         onClick={handleOpenReportModal}
+                        disabled={checkingReportStatus}
                       >
-                        Reportar
+                        {checkingReportStatus ? 'Validando...' : 'Reportar'}
                       </button>
                     </div>
                   </div>
@@ -551,6 +602,7 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
 
       <ReportRequestModal
         show={showReportModal}
+        requestId={selectedRequest.id}
         onClose={handleReportClose}
         onSubmit={handleSubmitReport}
       />
@@ -577,8 +629,17 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
       {showReportSuccessModal && (
         <SuccessModal
           title="Reporte registrado"
-          message="Gracias por reportar. Se revisará el la solicitud."
+          message="Gracias por reportar. Se revisará la solicitud."
           onClose={() => setShowReportSuccessModal(false)}
+        />
+      )}
+
+      {/* Información previa de reporte */}
+      {showReportInfoModal && (
+        <SuccessModal
+          title="Aviso"
+          message={reportInfoMessage}
+          onClose={() => setShowReportInfoModal(false)}
         />
       )}
     </>

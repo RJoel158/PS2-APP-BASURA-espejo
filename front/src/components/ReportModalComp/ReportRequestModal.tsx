@@ -1,32 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import './ReportRequestModal.css';
+import api from '../../services/api';
+import { API_ENDPOINTS } from '../../config/endpoints';
+import { debugLog } from '../../config/environment';
 
 interface ReportRequestModalProps {
   show: boolean;
+  requestId: number;
   onClose: () => void;
-  onSubmit: (reason: string, description: string) => void;
+  onSubmit: () => void;  // llamado solo al tener éxito
 }
 
 const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
   show,
+  requestId,
   onClose,
   onSubmit
 }) => {
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [reportValidationError, setReportValidationError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!show) {
       setReportReason('');
       setReportDescription('');
       setReportValidationError('');
+      setIsSubmitting(false);
     }
   }, [show]);
 
   if (!show) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!reportReason) {
       setReportValidationError('Selecciona una razón del reporte.');
       return;
@@ -37,7 +44,54 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
       return;
     }
 
-    onSubmit(reportReason, reportDescription.trim());
+
+    const userString = localStorage.getItem('user');
+    if (!userString) {
+      setReportValidationError('No se encontró información del usuario. Por favor inicia sesión nuevamente.');
+      return;
+    }
+
+    const currentUser = JSON.parse(userString);
+    const prosecutorId = currentUser.id;
+
+    if (!prosecutorId) {
+      setReportValidationError('No se pudo obtener el ID del usuario.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setReportValidationError('');
+
+    try {
+      debugLog('[INFO] ReportRequestModal - Enviando reporte:', { requestId, prosecutorId, reason: reportReason });
+
+      const response = await api.post(API_ENDPOINTS.REQUEST_REPORTS.CREATE, {
+        reason: reportReason,
+        description: reportDescription.trim(),
+        prosecutorId,
+        requestId
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Error al enviar el reporte');
+      }
+
+      debugLog('[INFO] ReportRequestModal - Reporte creado:', response.data);
+      onSubmit();
+    } catch (error: any) {
+      console.error('[ERROR] ReportRequestModal - Error al enviar reporte:', error);
+
+      const status = error?.response?.status;
+      const backendMsg = error?.response?.data?.error;
+
+      if (status === 409) {
+        setReportValidationError('Ya has reportado esta solicitud anteriormente.');
+      } else {
+        setReportValidationError(backendMsg || error?.message || 'Error al enviar el reporte. Intenta nuevamente.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,6 +136,7 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
             type="button"
             className="report-cancel-btn"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Cancelar
           </button>
@@ -89,8 +144,9 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
             type="button"
             className="report-submit-btn"
             onClick={handleSubmit}
+            disabled={isSubmitting}
           >
-            Enviar reporte
+            {isSubmitting ? 'Enviando...' : 'Enviar reporte'}
           </button>
         </div>
       </div>
