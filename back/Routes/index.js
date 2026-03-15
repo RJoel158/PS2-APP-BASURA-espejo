@@ -223,6 +223,7 @@ router.get('/request-reports/check/:requestId/:prosecutorId', requestReportContr
 router.get('/request-reports/request/:requestId', requestReportController.getReportsByRequest);
 router.get('/request-reports/prosecutor/:prosecutorId', requestReportController.getReportsByProsecutor);
 router.get('/request-reports/:id', requestReportController.getReportById);
+router.patch('/request-reports/:id/state', requestReportController.updateReportStateEndpoint);
 router.delete('/request-reports/:id', requestReportController.deleteReport);
 
 // ==========================================

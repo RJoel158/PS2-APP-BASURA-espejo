@@ -163,6 +163,7 @@ export const API_ENDPOINTS = {
     GET_BY_PROSECUTOR: (prosecutorId: number) => `/api/request-reports/prosecutor/${prosecutorId}`, // GET - Mis reportes
     CHECK: (requestId: number, prosecutorId: number) => `/api/request-reports/check/${requestId}/${prosecutorId}`, // GET - Ya reporté?
     DELETE: (reportId: number) => `/api/request-reports/${reportId}`,                            // DELETE - Soft delete
+    UPDATE_STATE: (reportId: number) => `/api/request-reports/${reportId}/state`,                 // PATCH - Cambiar estado
   },
 
   // ============================================

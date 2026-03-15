@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import CommonHeader from '../CommonComp/CommonHeader';
+import ConfirmModal from '../CommonComp/ConfirmModal';
 import { getAllRequestReports, type RequestReportItem } from '../../services/requestReportService';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
@@ -132,6 +133,8 @@ export default function DenunciasAdmin() {
   const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
   const [requestDetails, setRequestDetails] = useState<RequestScheduleData | null>(null);
   const [requestBaseData, setRequestBaseData] = useState<RequestBaseData | null>(null);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
   const openReportDetails = async (report: RequestReportItem, persistSelection: boolean = true) => {
     setSelectedReport(report);
@@ -251,7 +254,40 @@ export default function DenunciasAdmin() {
     setRequestDetails(null);
     setRequestBaseData(null);
     setDetailsLoading(false);
+    setShowDeleteConfirm(false);
     window.localStorage.removeItem(SELECTED_REPORT_STORAGE_KEY);
+  };
+
+  const handleMantener = async () => {
+    if (!selectedReport) return;
+    setActionLoading(true);
+    try {
+      await api.patch(API_ENDPOINTS.REQUEST_REPORTS.UPDATE_STATE(selectedReport.id), { state: 0 });
+      handleCloseDetails();
+      await loadReports();
+    } catch (error) {
+      console.error('[DenunciasAdmin] Error al mantener reporte:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEliminarSolicitud = async () => {
+    if (!selectedReport) return;
+    setActionLoading(true);
+    try {
+      await Promise.all([
+        api.patch(API_ENDPOINTS.REQUEST_REPORTS.UPDATE_STATE(selectedReport.id), { state: 0 }),
+        api.put(API_ENDPOINTS.REQUESTS.UPDATE_STATE(selectedReport.requestId), { state: 6 }),
+      ]);
+      handleCloseDetails();
+      await loadReports();
+    } catch (error) {
+      console.error('[DenunciasAdmin] Error al eliminar solicitud:', error);
+    } finally {
+      setActionLoading(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const requestMarkerPosition =
@@ -380,14 +416,38 @@ export default function DenunciasAdmin() {
                     </div>
                   </section>
 
-                  <div className="denuncia-actions-row">
-                    <button type="button" className="denuncia-action-btn denuncia-action-btn-danger">
-                      Eliminar solicitud
-                    </button>
-                    <button type="button" className="denuncia-action-btn denuncia-action-btn-secondary">
-                      Mantener
-                    </button>
-                  </div>
+                  {selectedReport.state !== 0 && (
+                    <div className="denuncia-actions-row">
+                      <button
+                        type="button"
+                        className="denuncia-action-btn denuncia-action-btn-danger"
+                        disabled={actionLoading}
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        Eliminar solicitud
+                      </button>
+                      <button
+                        type="button"
+                        className="denuncia-action-btn denuncia-action-btn-secondary"
+                        disabled={actionLoading}
+                        onClick={handleMantener}
+                      >
+                        {actionLoading ? 'Procesando...' : 'Mantener'}
+                      </button>
+                    </div>
+                  )}
+
+                  {showDeleteConfirm && (
+                    <ConfirmModal
+                      title="¿Eliminar solicitud?"
+                      message="Esta acción marcará la denuncia como verificada y eliminará la solicitud. "
+                      confirmText={actionLoading ? 'Eliminando...' : 'Sí, eliminar'}
+                      cancelText="Cancelar"
+                      isDangerous
+                      onConfirm={handleEliminarSolicitud}
+                      onCancel={() => setShowDeleteConfirm(false)}
+                    />
+                  )}
                 </>
               )}
             </div>

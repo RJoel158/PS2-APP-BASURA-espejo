@@ -173,6 +173,37 @@ export const checkUserReported = async (req, res) => {
 
 
 /**
+ * Actualizar estado de un reporte
+ * PATCH /api/request-reports/:id/state
+ * Body: { state: number }
+ */
+export const updateReportStateEndpoint = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { state } = req.body;
+
+		if (state === undefined || state === null) {
+			return res.status(400).json({ success: false, error: 'Campo state requerido' });
+		}
+
+		const existing = await RequestReportModel.getReportById(id);
+		if (!existing) {
+			return res.status(404).json({ success: false, error: 'Reporte no encontrado' });
+		}
+
+		const updated = await RequestReportModel.updateReportState(id, state);
+		if (!updated) {
+			return res.status(400).json({ success: false, error: 'No se pudo actualizar el estado del reporte' });
+		}
+
+		res.json({ success: true, message: 'Estado del reporte actualizado' });
+	} catch (error) {
+		console.error('[ERROR] requestReportController.updateReportStateEndpoint:', error);
+		res.status(500).json({ success: false, error: 'Error al actualizar estado del reporte' });
+	}
+};
+
+/**
  * Desactivar un reporte (soft delete)
  * DELETE /api/request-reports/:id
  */
