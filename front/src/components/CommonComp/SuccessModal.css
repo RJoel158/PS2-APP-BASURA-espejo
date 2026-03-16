@@ -1,15 +1,14 @@
 .success-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 12000;
   pointer-events: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .success-modal-overlay p{
@@ -20,14 +19,37 @@
   background-color: #F5F5DC;
   padding: 25px;
   border-radius: 30px;
-  width: 90%;       
-  max-width: 360px;  
+  width: min(90%, 360px);
+  max-width: 360px;
   text-align: center;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(10, 114, 57, 0.14);
   position: relative;
   z-index: 12001;
   pointer-events: auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 400px) {
+  .success-modal-box {
+    width: 92%;
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .success-modal-box h2 {
+    font-size: 19px;
+  }
+
+  .success-modal-box h3 {
+    font-size: 13px;
+  }
+
+  .success-modal-button {
+    min-width: 88px;
+    padding: 9px 14px;
+    font-size: 0.9rem;
+  }
 }
 
 .success-modal-box h2 {

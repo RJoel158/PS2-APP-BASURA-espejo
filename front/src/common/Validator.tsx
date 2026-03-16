@@ -98,9 +98,10 @@ export class Validator {
   }
 
   // Valida descripción (sin múltiples espacios)
-  static validateDescription(description: string, maxLength: number = 150): string {
+  static validateDescription(description: string, maxLength: number = 150, minLength: number = 1): string {
     const normalized = this.normalizeSpaces(description);
     if (!normalized) return "La descripción es requerida";
+    if (normalized.length < minLength) return `La descripción debe tener al menos ${minLength} caracteres`;
     if (normalized.length > maxLength) return `La descripción no puede exceder ${maxLength} caracteres`;
     return "";
   }

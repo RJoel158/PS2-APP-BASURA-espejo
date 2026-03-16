@@ -65,23 +65,24 @@
 }
 
 .report-trigger-btn {
-  background-color: #2a5d3f;
+  background-color: #c0392b;
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
   font-weight: 600;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
 
 .report-trigger-btn:hover {
-  background-color: #1f4d34;
+  background-color: #a93226;
 }
 
 .report-trigger-btn:focus {
   outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(42, 93, 63, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(192, 57, 43, 0.3);
 }
 
 .image-placeholder {
@@ -340,8 +341,8 @@
 
   .report-trigger-btn {
     width: 100%;
-    padding: 8px 10px;
-    font-size: 0.82rem;
+    padding: 6px 10px;
+    font-size: 0.78rem;
   }
   
   .pickup-card {
@@ -395,7 +396,7 @@
   }
 
   .report-trigger-btn {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
   }
 }
 

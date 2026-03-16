@@ -293,8 +293,12 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
   };
 
   const handleSubmitReport = () => {
-    setShowReportModal(false);
     setShowReportSuccessModal(true);
+  };
+
+  const handleCloseReportSuccessModal = () => {
+    setShowReportSuccessModal(false);
+    setShowReportModal(false);
   };
 
   const handleConfirm = async () => {
@@ -478,7 +482,7 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
                         onClick={handleOpenReportModal}
                         disabled={checkingReportStatus}
                       >
-                        {checkingReportStatus ? 'Validando...' : 'Reportar'}
+                        Reportar
                       </button>
                     </div>
                   </div>
@@ -630,14 +634,14 @@ const SchedulePickupModal: React.FC<SchedulePickupModalProps> = ({
         <SuccessModal
           title="Reporte registrado"
           message="Gracias por reportar. Se revisará la solicitud."
-          onClose={() => setShowReportSuccessModal(false)}
+          onClose={handleCloseReportSuccessModal}
         />
       )}
 
       {/* Información previa de reporte */}
       {showReportInfoModal && (
         <SuccessModal
-          title="Aviso"
+          title="Gracias por reportar"
           message={reportInfoMessage}
           onClose={() => setShowReportInfoModal(false)}
         />

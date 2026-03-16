@@ -30,7 +30,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ title, message, redirectUrl
         <div className="d-flex justify-content-end">
           <button
             type="button"
-            className="btn success-modal-button"
+            className="success-modal-button"
             onClick={handleClick}
           >
             Aceptar

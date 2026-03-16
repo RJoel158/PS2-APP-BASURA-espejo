@@ -138,6 +138,30 @@ export class Validator {
   }
 
   /**
+   * Valida descripción (sin múltiples espacios)
+   * @param {string} description - Descripción a validar
+   * @param {number} maxLength - Longitud máxima permitida
+   * @param {number} minLength - Longitud mínima permitida
+   * @returns {string} - Mensaje de error o string vacío
+   */
+  static validateDescription(description, maxLength = 150, minLength = 1) {
+    const normalized = this.normalizeSpaces(description);
+    if (!normalized) return "La descripción es requerida";
+    if (normalized.length < minLength) return `La descripción debe tener al menos ${minLength} caracteres`;
+    if (normalized.length > maxLength) return `La descripción no puede exceder ${maxLength} caracteres`;
+    return "";
+  }
+
+  /**
+   * Normaliza descripción (quita espacios múltiples)
+   * @param {string} description - Descripción a normalizar
+   * @returns {string} - Descripción normalizada
+   */
+  static normalizeDescription(description) {
+    return this.normalizeSpaces(description);
+  }
+
+  /**
    * Utilidad para saber si el objeto de errores está vacío
    * @param {Object} errors - Objeto de errores
    * @returns {boolean} - true si no hay errores, false si hay

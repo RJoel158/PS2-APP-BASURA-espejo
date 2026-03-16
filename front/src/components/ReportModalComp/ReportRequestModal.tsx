@@ -3,6 +3,7 @@ import './ReportRequestModal.css';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
 import { debugLog } from '../../config/environment';
+import { Validator } from '../../common/Validator';
 
 interface ReportRequestModalProps {
   show: boolean;
@@ -10,6 +11,9 @@ interface ReportRequestModalProps {
   onClose: () => void;
   onSubmit: () => void;  // llamado solo al tener éxito
 }
+
+const MAX_DESC = 150;
+const MIN_DESC = 10;
 
 const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
   show,
@@ -33,14 +37,30 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
 
   if (!show) return null;
 
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    if (value.length <= MAX_DESC) {
+      setReportDescription(value);
+    }
+
+    if (reportValidationError) {
+      setReportValidationError('');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!reportReason) {
       setReportValidationError('Selecciona una razón del reporte.');
       return;
     }
 
-    if (!reportDescription.trim()) {
-      setReportValidationError('Ingresa una descripción del reporte.');
+    const descriptionError = Validator.validateDescription(reportDescription, MAX_DESC, MIN_DESC);
+    if (descriptionError) {
+      if (descriptionError === 'La descripción es requerida') {
+        setReportValidationError('Ingresa una descripción del reporte.');
+      } else {
+        setReportValidationError(descriptionError);
+      }
       return;
     }
 
@@ -67,7 +87,7 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
 
       const response = await api.post(API_ENDPOINTS.REQUEST_REPORTS.CREATE, {
         reason: reportReason,
-        description: reportDescription.trim(),
+        description: Validator.normalizeDescription(reportDescription),
         prosecutorId,
         requestId
       });
@@ -95,7 +115,7 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
   };
 
   return (
-    <div className="report-modal-overlay" onClick={onClose}>
+    <div className="report-modal-overlay">
       <div className="report-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="report-modal-header">
           <h5 className="report-modal-title">Reportar solicitud</h5>
@@ -121,10 +141,14 @@ const ReportRequestModal: React.FC<ReportRequestModalProps> = ({
             id="report-description"
             className="report-textarea"
             rows={4}
-            placeholder="Describe el motivo del reporte"
+            placeholder="Describe el motivo del reporte (mín. 10 caracteres)"
             value={reportDescription}
-            onChange={(e) => setReportDescription(e.target.value)}
+            onChange={handleDescriptionChange}
+            maxLength={MAX_DESC}
           />
+          <div className={`report-char-counter ${reportDescription.length >= MAX_DESC - 20 ? 'report-char-counter--warning' : ''}`}>
+            {reportDescription.length}/{MAX_DESC}
+          </div>
 
           {reportValidationError && (
             <div className="report-error-text">{reportValidationError}</div>

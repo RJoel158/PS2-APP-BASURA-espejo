@@ -1,21 +1,40 @@
 import * as RequestReportModel from '../Models/requestReportModel.js';
+import { Validator } from '../shared/Validator.js';
+
+const MAX_REPORT_DESCRIPTION_LENGTH = 150;
+const MIN_REPORT_DESCRIPTION_LENGTH = 10;
 
 /**
  * Crear un reporte sobre una solicitud
  * POST /api/request-reports
- * Body: { reason, description?, prosecutorId, requestId }
+ * Body: { reason, description, prosecutorId, requestId }
  */
 export const createReport = async (req, res) => {
 	try {
 		const { reason, description, prosecutorId, requestId } = req.body;
+		const normalizedReason = Validator.normalizeSpaces(reason || '');
+		const normalizedDescription = Validator.normalizeDescription(description || '');
 
 		console.log('[INFO] requestReportController.createReport - Request body:', req.body);
 
 		// Validaciones básicas
-		if (!reason || !prosecutorId || !requestId) {
+		if (!normalizedReason || !prosecutorId || !requestId) {
 			return res.status(400).json({
 				success: false,
 				error: 'Faltan campos requeridos: reason, prosecutorId, requestId'
+			});
+		}
+
+		const descriptionError = Validator.validateDescription(
+			normalizedDescription,
+			MAX_REPORT_DESCRIPTION_LENGTH,
+			MIN_REPORT_DESCRIPTION_LENGTH
+		);
+
+		if (descriptionError) {
+			return res.status(400).json({
+				success: false,
+				error: descriptionError
 			});
 		}
 
@@ -29,8 +48,8 @@ export const createReport = async (req, res) => {
 		}
 
 		const reportId = await RequestReportModel.createReport(
-			reason,
-			description || null,
+			normalizedReason,
+			normalizedDescription,
 			prosecutorId,
 			requestId
 		);
