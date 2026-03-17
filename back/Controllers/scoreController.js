@@ -30,16 +30,31 @@ export const createScore = async (req, res) => {
       }
     }
 
-    // Verificar si ya calificó
-    const alreadyRated = await ScoreModel.hasUserRated(appointmentId, ratedByUserId);
-    if (alreadyRated) {
-      return res.status(400).json({
-        success: false,
-        error: 'Ya has calificado esta cita'
-      });
+    // Verificar si ya existe un registro y si ya ha calificado
+    const existingRow = await ScoreModel.checkIfRowExists(appointmentId, ratedByUserId);
+
+    if (existingRow) {
+      if (existingRow.rating !== null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Ya has calificado esta cita'
+        });
+      } else {
+        // MODO UPSERT: Ya existe la fila de puntos base, actualizamos con el rating y comentario
+        await ScoreModel.updateScoreRating(appointmentId, ratedByUserId, rating, comment);
+        return res.status(200).json({
+          success: true,
+          message: 'Calificación actualizada exitosamente',
+          data: { 
+            id: existingRow.id,
+            rating: rating || null,
+            scoreAwarded: parseInt(rating) // los puntos adicionales sumados
+          }
+        });
+      }
     }
 
-    // Crear calificación (rating puede ser null)
+    // Crear calificación (rating puede ser null) - fallback por si no se creó la base
     const scoreId = await ScoreModel.createScore(
       appointmentId,
       ratedByUserId,

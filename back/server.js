@@ -202,6 +202,6 @@ server.listen(PORT, async () => {
   } else {
     console.log("⚠️ Servicio de email no disponible - revisa tu configuración .env");
   }
-  
+
   console.log("✅ Servidor completamente iniciado");
 });

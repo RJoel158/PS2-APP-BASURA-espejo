@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './SchedulePickup.css';
 import SuccessModal from '../CommonComp/SuccesModal';
 import ImageCarousel from './ImageCarousel';
-import ReportRequestModal from '../ReportModalComp/ReportRequestModal.tsx';
+import ReportRequestModal from '../ReportModalComp/ReportRequestModal';
 import { debugLog } from '../../config/environment';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';

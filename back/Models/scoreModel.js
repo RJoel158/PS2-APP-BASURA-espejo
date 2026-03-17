@@ -76,6 +76,7 @@ export const hasUserRated = async (appointmentId, userId) => {
       FROM score
       WHERE appointmentConfirmationId = ? 
         AND ratedByUserId = ?
+        AND rating IS NOT NULL
         AND state = 1
     `;
     
@@ -83,6 +84,57 @@ export const hasUserRated = async (appointmentId, userId) => {
     return rows[0].count > 0;
   } catch (err) {
     console.error('[ERROR] ScoreModel.hasUserRated:', err);
+    throw err;
+  }
+};
+
+/**
+ * Verificar si ya existe una fila (con o sin rating) para actualizar
+ */
+export const checkIfRowExists = async (appointmentId, userId) => {
+  try {
+    const query = `
+      SELECT id, rating 
+      FROM score
+      WHERE appointmentConfirmationId = ? 
+        AND ratedByUserId = ?
+        AND state = 1
+      LIMIT 1
+    `;
+    
+    const [rows] = await db.query(query, [appointmentId, userId]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (err) {
+    console.error('[ERROR] ScoreModel.checkIfRowExists:', err);
+    throw err;
+  }
+};
+
+/**
+ * Actualizar una calificación existente que previamente solo tenía puntos base
+ */
+export const updateScoreRating = async (appointmentId, ratedByUserId, rating, comment) => {
+  try {
+    const additionalPoints = parseInt(rating);
+    const query = `
+      UPDATE score 
+      SET rating = ?, 
+          comment = ?, 
+          score = score + ?
+      WHERE appointmentConfirmationId = ? AND ratedByUserId = ? AND state = 1
+    `;
+    
+    const [result] = await db.query(query, [
+      rating, 
+      comment, 
+      additionalPoints, 
+      appointmentId, 
+      ratedByUserId
+    ]);
+    
+    return result.affectedRows > 0;
+  } catch (err) {
+    console.error('[ERROR] ScoreModel.updateScoreRating:', err);
     throw err;
   }
 };

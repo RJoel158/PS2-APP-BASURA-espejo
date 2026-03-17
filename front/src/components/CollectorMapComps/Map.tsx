@@ -9,16 +9,17 @@ import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
 // Importar el icono de marcador solicitado
-import locationIcon from "../../assets/icons/location3.png";
+const createCustomIcon = (color: string) => L.divIcon({
+  className: "custom-pin",
+  html: `<svg width="40" height="40" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.25));"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -40]
+});
+const recyclingIcon = createCustomIcon("#22c55e");
 
 // Crear icono personalizado usando el archivo existente
-const recyclingIcon = new L.Icon({
-  iconUrl: locationIcon,
-  iconSize: [35, 35],
-  iconAnchor: [17.5, 35],
-  popupAnchor: [0, -35],
-  className: 'recycling-marker-icon'
-});
+// (removido)
 
 // Crear icono para clusters (grupos de marcadores)
 const createClusterIcon = (count: number) => {
@@ -89,6 +90,31 @@ const RecyclingPointsMap: React.FC = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   //Para controlar el modal de Schedule Pickup
   const [showPickupModal, setShowPickupModal] = useState(false);
+
+  // States para filtrado
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({ materialId: '', day: '' });
+
+  const applyFilters = (requests: RecyclingRequest[]) => {
+    return requests.filter(req => {
+      let matchMaterial = true;
+      let matchDay = true;
+      if (filters.materialId) {
+        matchMaterial = req.materialId.toString() === filters.materialId;
+      }
+      if (filters.day) {
+        // En base a days string JSON o propiedad
+        if (req.days && Array.isArray(req.days)) {
+           matchDay = req.days.includes(filters.day);
+        } else if (req.schedule) {
+           // Asumiendo q la data schedule trae formato lun,mar,etc.
+           // Se trata de coincidencia rápida
+           matchDay = JSON.stringify(req.schedule).includes(filters.day);
+        }
+      }
+      return matchMaterial && matchDay;
+    });
+  };
 
   // Función para calcular la distancia entre dos puntos en metros
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -208,7 +234,8 @@ const RecyclingPointsMap: React.FC = () => {
         const bounds = map.getBounds();
         
         // Filtrar requests basado en zoom y área visible
-        const visibleRequests = getVisibleRequests(recyclingRequests, zoom, bounds);
+        const filteredRequests = applyFilters(recyclingRequests);
+        const visibleRequests = getVisibleRequests(filteredRequests, zoom, bounds);
         const newClusters = clusterRequests(visibleRequests, zoom >= config.clustering.minZoom ? 50 : config.clustering.maxDistance);
         setMarkerClusters(newClusters);
         
@@ -220,7 +247,8 @@ const RecyclingPointsMap: React.FC = () => {
         const bounds = map.getBounds();
         
         // Actualizar marcadores basado en nueva área visible
-        const visibleRequests = getVisibleRequests(recyclingRequests, zoom, bounds);
+        const filteredRequests = applyFilters(recyclingRequests);
+        const visibleRequests = getVisibleRequests(filteredRequests, zoom, bounds);
         const newClusters = clusterRequests(visibleRequests, zoom >= config.clustering.minZoom ? 50 : config.clustering.maxDistance);
         setMarkerClusters(newClusters);
         
@@ -402,7 +430,8 @@ const RecyclingPointsMap: React.FC = () => {
         // Generar clusters de marcadores considerando el zoom inicial (14)
         // Aplicar filtro de zoom desde el inicio - zoom 14 es considerado alto
         const initialZoom = config.map.defaultZoom;
-        const visibleRequests = getVisibleRequests(normalizedRequests, initialZoom, undefined);
+        const filteredNormRequests = applyFilters(normalizedRequests);
+        const visibleRequests = getVisibleRequests(filteredNormRequests, initialZoom, undefined);
         const clusters = clusterRequests(visibleRequests, 100); // 100 metros de distancia máxima
         debugLog(`Generated initial clusters with zoom ${initialZoom}:`, clusters);
         setMarkerClusters(clusters);
@@ -563,6 +592,15 @@ const RecyclingPointsMap: React.FC = () => {
     fetchActiveRequests();
   }, []);
 
+  useEffect(() => {
+    // Re-cluster when filters change
+    if (recyclingRequests.length > 0) {
+      const filtered = applyFilters(recyclingRequests);
+      const visible = getVisibleRequests(filtered, config.map.defaultZoom, undefined);
+      setMarkerClusters(clusterRequests(visible, 100));
+    }
+  }, [filters]);
+
 
   if (loading) {
     return (
@@ -588,9 +626,16 @@ const RecyclingPointsMap: React.FC = () => {
         ← Volver
       </button>
 
-        <div className="recycling-points-header">
+        <div className="recycling-points-header" style={{ position: 'relative' }}>
         <h1 className="recycling-points-title">Puntos de Reciclaje</h1>
         <p className="recycling-points-subtitle">Personas que ofrecen material para reciclar</p>
+        
+        <button 
+          onClick={() => setShowFilterModal(true)}
+          style={{ position: 'absolute', right: '10px', top: '10px', padding: '8px 12px', background: '#3b82f6', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+          Filtrar
+        </button>
 
         {error && (
           <div className="error-message">
@@ -697,10 +742,38 @@ const RecyclingPointsMap: React.FC = () => {
               onScheduleSuccess={() => fetchActiveRequests()}
             />
           )}
-        </div>
+          {showFilterModal && (
+            <div style={{position:"absolute", top:0, left:0, width:"100%", height:"100%", backgroundColor:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", justifyContent:"center", alignItems:"center"}}>
+              <div style={{background:"white", padding:"20px", borderRadius:"8px", width:"90%", maxWidth:"350px"}}>
+                <h3 style={{marginTop:0, marginBottom:"15px", color:"#333"}}>Opciones de Filtrado</h3>
+                <div style={{marginBottom:"15px"}}>
+                  <label style={{display:"block", marginBottom:"5px", fontWeight:"bold"}}>Material:</label>
+                  <select style={{width:"100%", padding:"8px", borderRadius:"4px", border:"1px solid #ccc"}} value={filters.materialId} onChange={(e)=>setFilters({...filters, materialId: e.target.value})}>
+                    <option value="">Todos los materiales</option>
+                    {materials.map(m => (<option key={m.id} value={m.id}>{m.name}</option>))}
+                  </select>
+                </div>
+                <div style={{marginBottom:"20px"}}>
+                  <label style={{display:"block", marginBottom:"5px", fontWeight:"bold"}}>Día disponible:</label>
+                  <select style={{width:"100%", padding:"8px", borderRadius:"4px", border:"1px solid #ccc"}} value={filters.day} onChange={(e)=>setFilters({...filters, day: e.target.value})}>
+                    <option value="">Cualquier día</option>
+                    <option value="lun">Lunes</option>
+                    <option value="mar">Martes</option>
+                    <option value="mie">Miércoles</option>
+                    <option value="jue">Jueves</option>
+                    <option value="vie">Viernes</option>
+                    <option value="sab">Sábado</option>
+                    <option value="dom">Domingo</option>
+                  </select>
+                </div>
+                <div style={{display:"flex", justifyContent:"space-between", gap:"10px"}}>
+                  <button onClick={()=>{setFilters({materialId:"", day:""}); setShowFilterModal(false);}} style={{padding:"8px", background:"#f3f4f6", border:"none", borderRadius:"4px", cursor:"pointer", flex:1}}>Limpiar</button>
+                  <button onClick={()=>setShowFilterModal(false)} style={{padding:"8px", background:"#3b82f6", color:"white", border:"none", borderRadius:"4px", cursor:"pointer", flex:1}}>Aplicar</button>
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div className="requests-counter">
-          <span>{recyclingRequests.length} puntos de reciclaje disponibles</span>
           {error && error.includes('ℹ️') && (
             <div className="db-status-indicator">
               <span className="status-dot offline"></span>
@@ -714,3 +787,4 @@ const RecyclingPointsMap: React.FC = () => {
 };
 
 export default RecyclingPointsMap;
+// Fix missing effect manually later

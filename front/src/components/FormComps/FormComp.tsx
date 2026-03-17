@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import './FormComp.css';
 import MapPopup from "./MapPopup"; // importar el componente del mapa
 import MiniMapPreview from "./MiniMapPreview"; // importar el mini mapa
@@ -339,10 +340,16 @@ const FormComp: React.FC = () => {
       console.log("Datos de respuesta:", data);
 
       if (data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Formulario enviado!',
+          text: 'Tu solicitud ha sido creada exitosamente.',
+          confirmButtonColor: '#4CAF50'
+        });
         setMensaje("Solicitud creada exitosamente!");
-        setFormData({ 
-          materialId: 0, 
-          description: '', 
+        setFormData({
+          materialId: 0,
+          description: '',
           photos: [], 
           availableDays: [], 
           timeFrom: '', 
@@ -354,10 +361,20 @@ const FormComp: React.FC = () => {
         photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
         setPhotoPreviewUrls([]);
       } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.error || "Error desconocido al crear la solicitud",
+        });
         setMensaje(data.error || "Error desconocido al crear la solicitud");
       }
     } catch (error) {
       console.error("Error al enviar solicitud:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar al servidor para crear la solicitud',
+      });
       setMensaje("No se pudo conectar al servidor para crear la solicitud");
     } finally {
       setSubmitting(false);

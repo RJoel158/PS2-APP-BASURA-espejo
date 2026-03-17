@@ -1,0 +1,4 @@
+USE greenbit_v2;
+ALTER TABLE request
+  ADD CONSTRAINT fk_request_user FOREIGN KEY (idUser) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT fk_request_material FOREIGN KEY (materialId) REFERENCES material(id) ON DELETE SET NULL ON UPDATE CASCADE;

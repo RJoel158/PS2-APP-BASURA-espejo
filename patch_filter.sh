@@ -1,0 +1,1 @@
+sed -i 's/const visibleRequests = getVisibleRequests(recyclingRequests, zoom, bounds);/const filteredRequests = applyFilters(recyclingRequests);\n        const visibleRequests = getVisibleRequests(filteredRequests, zoom, bounds);/g' front/src/components/CollectorMapComps/Map.tsx

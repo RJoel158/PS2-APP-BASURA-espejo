@@ -1,6 +1,7 @@
 import * as AppointmentModel from "../Models/appointmentModel.js";
 import db from '../config/DBConnect.js';
 import * as NotificationModel from "../Models/notificationModel.js";
+import * as ScoreModel from "../Models/scoreModel.js";
 import { sendRealTimeNotification } from "../server.js";
 import { APPOINTMENT_STATE, REQUEST_STATE } from "../shared/constants.js";
 
@@ -668,6 +669,21 @@ export const completeAppointmentEndpoint = async (req, res) => {
           materialName,
           appointmentId: id 
         });
+
+        // ========== REGISTRO DE PUNTAJE BASE AL COMPLETAR ==========
+        try {
+          console.log("[DEBUG] Registrando puntos base para el collector:", collectorId);
+          await ScoreModel.createScore(
+            parseInt(id),
+            recyclerId,    // ratedByUserId (quien calificará luego, el dueño de la solicitud)
+            collectorId,   // ratedToUserId (quien hizo la recolección)
+            null,          // rating nulo por ahora
+            null           // comment nulo
+          );
+        } catch (scoreErr) {
+          console.error("[ERROR] Failed to insert initial base score:", scoreErr.message);
+          // No bloqueamos el flujo si falla el puntaje
+        }
 
         const notificationTitle = "🎉 Recolección completada";
         const notificationMessage = `${collectorEmail} ha completado la recolección de ${materialName}`;
