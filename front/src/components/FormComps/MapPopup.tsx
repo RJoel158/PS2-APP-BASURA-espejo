@@ -4,14 +4,23 @@ import L from "leaflet";
 import type { LeafletMouseEvent } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// ��� IMPORTA TU IMAGEN LOCAL
-import reciclajeIconImage from "../../assets/icons/location3.png";
-
-const reciclajeIcon = new L.Icon({
-  iconUrl: reciclajeIconImage,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
+// Crear marcador verde sencillo con reborde blanco
+const createGreenMarker = () => L.divIcon({
+  className: "green-marker",
+  html: `<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Reborde blanco exterior -->
+    <path d="M16 0C7.17 0 0 7.17 0 16c0 8 16 24 16 24s16-16 16-24c0-8.83-7.17-16-16-16z" fill="white" stroke="white" stroke-width="2"/>
+    <!-- Pin verde interior -->
+    <path d="M16 2C8.27 2 2 8.27 2 16c0 6.83 14 20.5 14 20.5s14-13.67 14-20.5c0-7.73-6.27-14-14-14z" fill="#22c55e"/>
+    <!-- Punto central -->
+    <circle cx="16" cy="14" r="4" fill="white"/>
+  </svg>`,
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
+  popupAnchor: [0, -40],
 });
+
+const greenMarker = createGreenMarker();
 
 interface MapPopupProps {
   onSelect: (lat: number, lng: number, address?: string) => void;
@@ -87,7 +96,7 @@ function LocationMarker({ onSelect, initialPosition }: { onSelect: (lat: number,
 
   return (
     <>
-      {position && <Marker position={position} icon={reciclajeIcon} />}
+      {position && <Marker position={position} icon={greenMarker} />}
       {isLoadingAddress && (
         <div style={{
           position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)',

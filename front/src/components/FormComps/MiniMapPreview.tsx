@@ -3,14 +3,20 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// 👈 IMPORTA TU IMAGEN LOCAL (cambia 'tu-imagen.png' por el nombre real)
-import reciclajeIconImage from "../../assets/icons/location3.png";
-
-const reciclajeIcon = new L.Icon({
-  iconUrl: reciclajeIconImage, // 👈 USA LA IMAGEN IMPORTADA
-  iconSize: [30, 30], // Un poco más pequeño para el mini mapa
-  iconAnchor: [15, 30],
+// Marcador verde sencillo con reborde blanco (mismo estilo que MapPopup)
+const createGreenMarker = () => L.divIcon({
+  className: "green-marker",
+  html: `<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16 0C7.17 0 0 7.17 0 16c0 8 16 24 16 24s16-16 16-24c0-8.83-7.17-16-16-16z" fill="white" stroke="white" stroke-width="2"/>
+    <path d="M16 2C8.27 2 2 8.27 2 16c0 6.83 14 20.5 14 20.5s14-13.67 14-20.5c0-7.73-6.27-14-14-14z" fill="#22c55e"/>
+    <circle cx="16" cy="14" r="4" fill="white"/>
+  </svg>`,
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
+  popupAnchor: [0, -40],
 });
+
+const greenMarker = createGreenMarker();
 
 interface MiniMapPreviewProps {
   lat: number;
@@ -57,7 +63,7 @@ const MiniMapPreview: React.FC<MiniMapPreviewProps> = ({ lat, lng, address }) =>
             attribution='&copy; OpenStreetMap'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={[lat, lng]} icon={reciclajeIcon} />
+          <Marker position={[lat, lng]} icon={greenMarker} />
           <UpdateMapCenter lat={lat} lng={lng} />
         </MapContainer>
       </div>
