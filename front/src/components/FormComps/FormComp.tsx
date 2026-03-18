@@ -1,8 +1,26 @@
+/**
+ * FormComp - Request Creation Form
+ * 
+ * CONTRATO API: POST /api/request (multipart/form-data)
+ * 
+ * CAMPOS REQUERIDOS (aplicación específica):
+ * - idUser: string (from localStorage.user.id)
+ * - description: string (max 150 chars, trimmed)
+ * - materialId: string (dropdown selection)
+ * - latitude: string (from map marker)
+ * - longitude: string (from map marker)
+ * - state: string (always "1" for REQUEST_STATE.OPEN)
+ * - availableDays: string (JSON array: ["lun","mar","mie","jue","vie","sab","dom"])
+ * - timeFrom: string (HH:MM format, 24-hour)
+ * - timeTo: string (HH:MM format, 24-hour)
+ * - photos: File[] (multipart, 1-5 files)
+ */
+
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import './FormComp.css';
-import MapPopup from "./MapPopup"; // importar el componente del mapa
-import MiniMapPreview from "./MiniMapPreview"; // importar el mini mapa
+import MapPopup from "./MapPopup";
+import MiniMapPreview from "./MiniMapPreview";
 import { REQUEST_STATE } from '../../shared/constants';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
@@ -34,6 +52,7 @@ const FormComp: React.FC = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false); // Estado para geolocalización en progreso
   const [mensaje, setMensaje] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -170,6 +189,7 @@ const FormComp: React.FC = () => {
     window.location.reload();
   };
 
+  // Contrato API: materialId (number, requerido - seleccionable de lista)
   const handleMaterialChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({ ...formData, materialId: parseInt(e.target.value) });
   };
@@ -177,7 +197,7 @@ const FormComp: React.FC = () => {
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let value = e.target.value;
     
-    // Limitar a 150 caracteres
+    // Contrato API: description (string, max 150 chars, trim whitespace)
     if (value.length <= 150) {
       // Reemplazar múltiples espacios con un solo espacio
       value = value.replace(/\s+/g, ' ');
@@ -185,7 +205,7 @@ const FormComp: React.FC = () => {
     }
   };
 
-  // FUNCIÓN CORREGIDA: Ahora agrega fotos en lugar de reemplazar
+  // Contrato API: photos (File array, 1-5 files required, multipart/form-data)
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -246,6 +266,7 @@ const FormComp: React.FC = () => {
     }
   };
 
+  // Contrato API: availableDays (array de strings como JSON, e.g., ["lun","mar","vie"])
   const handleDayToggle = (day: string) => {
     const updatedDays = formData.availableDays.includes(day)
       ? formData.availableDays.filter(d => d !== day)
@@ -253,6 +274,7 @@ const FormComp: React.FC = () => {
     setFormData({ ...formData, availableDays: updatedDays });
   };
 
+  // Contrato API: timeFrom y timeTo (formato HH:MM, timeFrom < timeTo)
   const handleTimeChange = (field: 'timeFrom' | 'timeTo', value: string) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -267,27 +289,211 @@ const FormComp: React.FC = () => {
   // Función para seleccionar ubicación con dirección
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     setSelectedLocation({ lat, lng, address });
+    setShowMap(false); // Siempre cierra el modal
+  };
+
+  /**
+   * Usa la geolocalización del navegador para obtener coordenadas actuales
+   * Llamada desde el botón "Usar mi ubicación" en el modal del mapa
+   */
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Geolocalización no disponible',
+        text: 'Tu navegador no soporta geolocalización',
+      });
+      return;
+    }
+
+    // Mostrar indicador de progreso en el botón
+    setLocating(true);
+    // Cerrar el modal inmediatamente
     setShowMap(false);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        // Obtener dirección desde coordenadas
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=es`
+          );
+          const data = await response.json();
+          const address = data.address || {};
+          const parts = [];
+
+          if (address.house_number && address.road)
+            parts.push(`${address.road} ${address.house_number}`);
+          else if (address.road) parts.push(address.road);
+
+          if (address.neighbourhood || address.suburb || address.quarter) {
+            parts.push(address.neighbourhood || address.suburb || address.quarter);
+          }
+          if (address.city || address.town || address.village) {
+            parts.push(address.city || address.town || address.village);
+          }
+
+          const addressString =
+            parts.length > 0 ? parts.join(', ') : 'Ubicación actual';
+
+          // Actualizar ubicación
+          setSelectedLocation({ lat, lng, address: addressString });
+          
+          // Mostrar confirmación
+          Swal.fire({
+            icon: 'success',
+            title: '¡Ubicación obtenida!',
+            text: addressString,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2500
+          });
+        } catch (error) {
+          // Actualizar ubicación sin dirección
+          setSelectedLocation({ lat, lng, address: 'Ubicación actual' });
+          
+          Swal.fire({
+            icon: 'success',
+            title: '¡Ubicación obtenida!',
+            text: 'Ubicación actual seleccionada',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2500
+          });
+        } finally {
+          setLocating(false);
+        }
+      },
+      (error) => {
+        // No mostrar error modal, solo quitar el spinner después del timeout
+        // El usuario verá el spinner emulado hasta que expire
+        setLocating(false);
+        
+        // Si es rechazo de permisos, solo mostrar un toast informativo
+        if (error.code === error.PERMISSION_DENIED) {
+          Swal.fire({
+            icon: 'info',
+            title: 'Permiso requerido',
+            text: 'Por favor, selecciona manualmente en el mapa',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+          });
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   const handleBack = () => {
     window.history.back();
   };
 
-  const handleSubmit = async () => {
-    if (formData.materialId === 0) return setMensaje("Debes seleccionar un material");
-    if (!formData.description.trim()) return setMensaje("Debes proporcionar una descripción");
-    if (formData.description.length > 150) return setMensaje("La descripción no puede exceder 150 caracteres");
-    if (formData.photos.length === 0) return setMensaje("Debes subir al menos una foto");
-    if (formData.availableDays.length === 0) return setMensaje("Debes seleccionar al menos un día disponible");
-    if (!formData.timeFrom || !formData.timeTo) return setMensaje("Debes especificar el horario disponible");
-    
-    // Validar que la hora de inicio no sea mayor que la hora de fin
-    if (formData.timeFrom >= formData.timeTo) {
-      return setMensaje("La hora de inicio debe ser menor que la hora de fin");
+  /**
+   * Validaciones específicas para el contrato API /api/request
+   * Retorna array de errores si hay alguno
+   */
+  const validateAPIContract = (): string[] => {
+    const errors: string[] = [];
+
+    // Material: debe ser seleccionado
+    if (formData.materialId === 0) {
+      errors.push("materialId es requerido");
     }
-    
-    if (!selectedLocation) return setMensaje("Debes seleccionar la ubicación en el mapa");
+
+    // Description: max 150 chars, debe estar presente
+    if (!formData.description.trim()) {
+      errors.push("description es requerida");
+    } else if (formData.description.length > 150) {
+      errors.push("description no puede exceder 150 caracteres");
+    }
+
+    // Photos: 1-5 files requeridos
+    if (formData.photos.length === 0) {
+      errors.push("Se requiere al menos 1 foto");
+    } else if (formData.photos.length > 5) {
+      errors.push("Máximo 5 fotos permitidas");
+    }
+
+    // Available Days: array no vacío
+    if (formData.availableDays.length === 0) {
+      errors.push("availableDays es requerido (selecciona al menos 1 día)");
+    }
+
+    // Time Range: ambos campos y validación HH:MM
+    if (!formData.timeFrom) {
+      errors.push("timeFrom es requerido (formato HH:MM)");
+    }
+    if (!formData.timeTo) {
+      errors.push("timeTo es requerido (formato HH:MM)");
+    }
+    if (formData.timeFrom && formData.timeTo) {
+      if (formData.timeFrom >= formData.timeTo) {
+        errors.push("timeFrom debe ser menor que timeTo");
+      }
+    }
+
+    // Location: latitude y longitude requeridos
+    if (!selectedLocation) {
+      errors.push("selectedLocation es requerida (latitude, longitude)");
+    }
+
+    return errors;
+  };
+
+  /**
+   * Construye FormData exactamente según contrato API
+   * Campo a campo con tipos correctos
+   */
+  const buildAPIFormData = (user: any): FormData => {
+    const formDataToSend = new FormData();
+
+    // User identification (from localStorage)
+    formDataToSend.append('idUser', user.id.toString());
+
+    // Material & Description (Step 1)
+    formDataToSend.append('materialId', formData.materialId.toString());
+    formDataToSend.append('description', formData.description.trim());
+
+    // Location (Step 3 - Map)
+    formDataToSend.append('latitude', selectedLocation!.lat.toString());
+    formDataToSend.append('longitude', selectedLocation!.lng.toString());
+
+    // Schedule (Step 3 - Availability)
+    formDataToSend.append('timeFrom', formData.timeFrom);
+    formDataToSend.append('timeTo', formData.timeTo);
+    // availableDays como JSON string (e.g., '["lun","mar","vie"]')
+    formDataToSend.append('availableDays', JSON.stringify(formData.availableDays));
+
+    // State (always REQUEST_STATE.OPEN = 1)
+    formDataToSend.append('state', REQUEST_STATE.OPEN.toString());
+
+    // Photos (Step 2 - multipart files)
+    formData.photos.forEach((photo) => {
+      formDataToSend.append('photos', photo);
+    });
+
+    return formDataToSend;
+  };
+
+  const handleSubmit = async () => {
+    // Validar contrato API
+    const validationErrors = validateAPIContract();
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.join("\n• ");
+      setMensaje(`Errores de validación:\n• ${errorMessage}`);
+      return;
+    }
 
     setSubmitting(true);
     setMensaje("");
@@ -302,28 +508,11 @@ const FormComp: React.FC = () => {
 
       const user = JSON.parse(userStr);
 
-      // Crear FormData para enviar archivos
-      const formDataToSend = new FormData();
-      
-      // Agregar datos básicos
-      formDataToSend.append('idUser', user.id.toString());
-      formDataToSend.append('description', formData.description.trim());
-      formDataToSend.append('materialId', formData.materialId.toString());
-      formDataToSend.append('latitude', selectedLocation.lat.toString());
-      formDataToSend.append('longitude', selectedLocation.lng.toString());
-      formDataToSend.append('state', REQUEST_STATE.OPEN.toString()); // Estado 1 = OPEN (disponible para recoger)
-      
-      // Agregar horarios
-      formDataToSend.append('timeFrom', formData.timeFrom);
-      formDataToSend.append('timeTo', formData.timeTo);
-      formDataToSend.append('availableDays', JSON.stringify(formData.availableDays));
-      
-      // Agregar archivos de imagen
-      formData.photos.forEach((photo) => {
-        formDataToSend.append('photos', photo);
-      });
+      // Construir FormData según contrato API exacto
+      const formDataToSend = buildAPIFormData(user);
 
-      console.log("Enviando solicitud con FormData...");
+      console.log("Enviando solicitud POST /api/request con FormData...");
+      console.log("Validación pasada: ✓ (Contrato API completo)");
 
       const response = await api.post(API_ENDPOINTS.REQUESTS.CREATE, formDataToSend, {
         headers: {
@@ -331,22 +520,22 @@ const FormComp: React.FC = () => {
         }
       });
 
-      console.log("Respuesta de solicitud:", {
+      console.log("Respuesta API:", {
         status: response.status,
-        statusText: response.statusText
+        data: response.data
       });
 
       const data = response.data;
-      console.log("Datos de respuesta:", data);
 
       if (data.success) {
         Swal.fire({
           icon: 'success',
-          title: '¡Formulario enviado!',
-          text: 'Tu solicitud ha sido creada exitosamente.',
+          title: '¡Solicitud creada!',
+          text: 'Tu solicitud ha sido registrada exitosamente.',
           confirmButtonColor: '#4CAF50'
         });
-        setMensaje("Solicitud creada exitosamente!");
+
+        // Reset form a estado inicial
         setFormData({
           materialId: 0,
           description: '',
@@ -356,26 +545,24 @@ const FormComp: React.FC = () => {
           timeTo: '' 
         });
         setSelectedLocation(null);
-        
-        // Limpiar las URLs de vista previa
         photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
         setPhotoPreviewUrls([]);
       } else {
         Swal.fire({
           icon: 'error',
-          title: 'Error',
+          title: 'Error en solicitud',
           text: data.error || "Error desconocido al crear la solicitud",
         });
-        setMensaje(data.error || "Error desconocido al crear la solicitud");
+        setMensaje(data.error || "Error desconocido");
       }
     } catch (error) {
-      console.error("Error al enviar solicitud:", error);
+      console.error("Error API:", error);
       Swal.fire({
         icon: 'error',
         title: 'Error de conexión',
-        text: 'No se pudo conectar al servidor para crear la solicitud',
+        text: 'No se pudo conectar al servidor',
       });
-      setMensaje("No se pudo conectar al servidor para crear la solicitud");
+      setMensaje("Error de conexión con el servidor");
     } finally {
       setSubmitting(false);
     }
@@ -643,8 +830,27 @@ const FormComp: React.FC = () => {
             <div className="map-modal-actions">
               <button 
                 type="button"
+                className={`locate-button ${locating ? 'locating' : ''}`}
+                onClick={handleUseCurrentLocation}
+                disabled={locating}
+                title="Usar tu ubicación actual del dispositivo"
+              >
+                {locating ? (
+                  <>
+                    <span className="locating-spinner"></span>
+                    Obteniendo ubicación...
+                  </>
+                ) : (
+                  <>
+                    📍 Usar mi ubicación
+                  </>
+                )}
+              </button>
+              <button 
+                type="button"
                 className="cancel-button" 
                 onClick={() => setShowMap(false)}
+                disabled={locating}
               >
                 Cancelar
               </button>

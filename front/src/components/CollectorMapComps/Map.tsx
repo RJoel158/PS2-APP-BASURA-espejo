@@ -8,18 +8,15 @@ import SchedulePickupModal from '../SchedulePickupComp/SchedulePickupModal';
 import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
-// Importar el icono de marcador solicitado
-const createCustomIcon = (color: string) => L.divIcon({
-  className: "custom-pin",
-  html: `<svg width="40" height="40" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.25));"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>`,
+// Importar el icono personalizado (location3.png)
+import recyclingIconImage from '../../assets/icons/location3.png';
+
+const recyclingIcon = new L.Icon({
+  iconUrl: recyclingIconImage,
   iconSize: [40, 40],
   iconAnchor: [20, 40],
-  popupAnchor: [0, -40]
+  popupAnchor: [0, -40],
 });
-const recyclingIcon = createCustomIcon("#22c55e");
-
-// Crear icono personalizado usando el archivo existente
-// (removido)
 
 // Crear icono para clusters (grupos de marcadores)
 const createClusterIcon = (count: number) => {

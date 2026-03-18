@@ -4,7 +4,7 @@ import L from "leaflet";
 import type { LeafletMouseEvent } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// í±ˆ IMPORTA TU IMAGEN LOCAL
+// ï¿½ï¿½ï¿½ IMPORTA TU IMAGEN LOCAL
 import reciclajeIconImage from "../../assets/icons/location3.png";
 
 const reciclajeIcon = new L.Icon({
@@ -78,6 +78,11 @@ function LocationMarker({ onSelect, initialPosition }: { onSelect: (lat: number,
       map.flyTo(e.latlng, map.getZoom());
       handleLocationUpdate(e.latlng.lat, e.latlng.lng);
     },
+    locationerror() {
+      // Si falla la geolocalizaciÃ³n, mostrar feedback al usuario
+      console.warn("No se pudo obtener la geolocalizaciÃ³n");
+      setIsLoadingAddress(false);
+    },
   });
 
   return (
@@ -96,28 +101,6 @@ function LocationMarker({ onSelect, initialPosition }: { onSelect: (lat: number,
   );
 }
 
-function LocateControl() {
-  const map = useMap();
-  return (
-    <button
-      type="button"
-      onClick={() => map.locate()}
-      style={{
-        position: 'absolute', bottom: '20px', right: '20px', zIndex: 1000,
-        backgroundColor: '#4CAF50', color: 'white', border: 'none',
-        borderRadius: '50%', width: '50px', height: '50px', cursor: 'pointer',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}
-      title="Encontrar mi ubicaciÃ³n"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
-    </button>
-  );
-}
-
 export default function MapPopup({ onSelect, initialCoords }: MapPopupProps) {
   return (
     <div style={{ height: "400px", width: "100%", position: "relative" }}>
@@ -131,7 +114,6 @@ export default function MapPopup({ onSelect, initialCoords }: MapPopupProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <LocationMarker onSelect={onSelect} initialPosition={initialCoords} />
-        <LocateControl />
       </MapContainer>
     </div>
   );
