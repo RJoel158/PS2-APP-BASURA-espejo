@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -102,6 +102,21 @@ interface Material {
   description?: string;
 }
 
+interface MapViewState {
+  zoom: number;
+  bounds: L.LatLngBounds | null;
+}
+
+const DAY_TO_SCHEDULE_KEYS: Record<string, string[]> = {
+  lun: ['lun', 'lunes', 'monday', 'Monday'],
+  mar: ['mar', 'martes', 'tuesday', 'Tuesday'],
+  mie: ['mie', 'miércoles', 'miercoles', 'wednesday', 'Wednesday'],
+  jue: ['jue', 'jueves', 'thursday', 'Thursday'],
+  vie: ['vie', 'viernes', 'friday', 'Friday'],
+  sab: ['sab', 'sábado', 'sabado', 'saturday', 'Saturday'],
+  dom: ['dom', 'domingo', 'sunday', 'Sunday']
+};
+
 const RecyclingPointsMap: React.FC = () => {
   const [recyclingRequests, setRecyclingRequests] = useState<RecyclingRequest[]>([]);
   const [markerClusters, setMarkerClusters] = useState<MarkerCluster[]>([]);
@@ -111,6 +126,10 @@ const RecyclingPointsMap: React.FC = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [loadingRequestDetail, setLoadingRequestDetail] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [mapView, setMapView] = useState<MapViewState>({
+    zoom: config.map.defaultZoom,
+    bounds: null
+  });
   //Para controlar el modal de Schedule Pickup
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -121,23 +140,51 @@ const RecyclingPointsMap: React.FC = () => {
   const activeFilterCount = Number(Boolean(filters.materialId)) + Number(Boolean(filters.day));
   const hasActiveFilters = activeFilterCount > 0;
 
+  const normalizeDayToken = (value: unknown): string => {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    return value.trim().toLowerCase();
+  };
+
+  const isScheduleDayEnabled = (schedule: unknown, selectedDay: string): boolean => {
+    if (!schedule || typeof schedule !== 'object') {
+      return false;
+    }
+
+    const scheduleObj = schedule as Record<string, unknown>;
+    const allowedKeys = DAY_TO_SCHEDULE_KEYS[selectedDay] || [];
+
+    return allowedKeys.some((key) => {
+      const scheduleValue = scheduleObj[key];
+      return scheduleValue === 1 || scheduleValue === '1' || scheduleValue === true;
+    });
+  };
+
+  const hasDayInArray = (days: unknown, selectedDay: string): boolean => {
+    if (!Array.isArray(days)) {
+      return false;
+    }
+
+    const allowedKeys = DAY_TO_SCHEDULE_KEYS[selectedDay] || [];
+    const normalizedDays = days.map((day) => normalizeDayToken(day));
+    return normalizedDays.some((day) => allowedKeys.includes(day));
+  };
+
   const applyFilters = (requests: RecyclingRequest[]) => {
     return requests.filter(req => {
       let matchMaterial = true;
       let matchDay = true;
+
       if (filters.materialId) {
         matchMaterial = req.materialId.toString() === filters.materialId;
       }
+
       if (filters.day) {
-        // En base a days string JSON o propiedad
-        if (req.days && Array.isArray(req.days)) {
-           matchDay = req.days.includes(filters.day);
-        } else if (req.schedule) {
-           // Asumiendo q la data schedule trae formato lun,mar,etc.
-           // Se trata de coincidencia rápida
-           matchDay = JSON.stringify(req.schedule).includes(filters.day);
-        }
+        const selectedDay = normalizeDayToken(filters.day);
+        matchDay = hasDayInArray(req.days, selectedDay) || isScheduleDayEnabled(req.schedule, selectedDay);
       }
+
       return matchMaterial && matchDay;
     });
   };
@@ -277,29 +324,17 @@ const RecyclingPointsMap: React.FC = () => {
     useMapEvents({
       zoomend: (e) => {
         const map = e.target;
-        const zoom = map.getZoom();
-        const bounds = map.getBounds();
-        
-        // Filtrar requests basado en zoom y área visible
-        const filteredRequests = applyFilters(recyclingRequests);
-        const visibleRequests = getVisibleRequests(filteredRequests, zoom, bounds);
-        const newClusters = clusterRequests(visibleRequests, zoom >= config.clustering.minZoom ? 50 : config.clustering.maxDistance);
-        setMarkerClusters(newClusters);
-        
-        debugLog(`Zoom changed to ${zoom}, showing ${newClusters.length} clusters`);
+        setMapView({
+          zoom: map.getZoom(),
+          bounds: map.getBounds()
+        });
       },
       moveend: (e) => {
         const map = e.target;
-        const zoom = map.getZoom();
-        const bounds = map.getBounds();
-        
-        // Actualizar marcadores basado en nueva área visible
-        const filteredRequests = applyFilters(recyclingRequests);
-        const visibleRequests = getVisibleRequests(filteredRequests, zoom, bounds);
-        const newClusters = clusterRequests(visibleRequests, zoom >= config.clustering.minZoom ? 50 : config.clustering.maxDistance);
-        setMarkerClusters(newClusters);
-        
-        debugLog(`Map moved, showing ${newClusters.length} clusters in current view`);
+        setMapView({
+          zoom: map.getZoom(),
+          bounds: map.getBounds()
+        });
       }
     });
 
@@ -327,20 +362,9 @@ const RecyclingPointsMap: React.FC = () => {
     } catch (error) {
       console.error('Error fetching materials:', error);
     }
-    
-    // Materiales de fallback
-    debugLog('Using fallback materials');
-    const fallbackMaterials: Material[] = [
-      { id: 1, name: 'Plástico PET', description: 'Botellas de plástico' },
-      { id: 2, name: 'Cartón', description: 'Cajas de cartón' },
-      { id: 3, name: 'Papel', description: 'Papel de oficina' },
-      { id: 4, name: 'Vidrio', description: 'Botellas de vidrio' },
-      { id: 5, name: 'Metal', description: 'Latas de aluminio' },
-      { id: 18, name: 'Plástico', description: 'Envases plásticos' },
-      { id: 19, name: 'Textil', description: 'Ropa y telas' },
-      { id: 20, name: 'Electrónicos', description: 'Dispositivos electrónicos' }
-    ];
-    return fallbackMaterials;
+
+    // Sin fallback hardcodeado: solo materiales reales de DB.
+    return [];
   };
 
   // Función para obtener el nombre del material por ID
@@ -356,31 +380,7 @@ const RecyclingPointsMap: React.FC = () => {
       return material.name;
     }
     
-    // Nombres por defecto basados en IDs comunes
-    const defaultNames: { [key: number]: string } = {
-      1: 'Plástico PET',
-      2: 'Cartón',
-      3: 'Papel',
-      4: 'Vidrio',
-      5: 'Metal/Aluminio',
-      6: 'Orgánico',
-      7: 'Baterías',
-      8: 'Aceite de cocina',
-      9: 'Textiles',
-      10: 'Madera',
-      11: 'Caucho',
-      12: 'Pilas',
-      13: 'Aceite usado',
-      14: 'Chatarra',
-      15: 'Computadoras',
-      16: 'Teléfonos',
-      17: 'Televisores',
-      18: 'Plástico',
-      19: 'Textil',
-      20: 'Electrónicos'
-    };
-    
-    return defaultNames[materialId] || `Material ID: ${materialId}`;
+    return `Material #${materialId}`;
   };
 
   // Función para obtener las requests activas desde el backend
@@ -475,38 +475,19 @@ const RecyclingPointsMap: React.FC = () => {
         debugLog('All normalized requests:', normalizedRequests);
         setRecyclingRequests(normalizedRequests);
 
-        // Generar clusters de marcadores considerando el zoom inicial (14)
-        // Aplicar filtro de zoom desde el inicio - zoom 14 es considerado alto
-        const initialZoom = config.map.defaultZoom;
-        const filteredNormRequests = applyFilters(normalizedRequests);
-        const visibleRequests = getVisibleRequests(filteredNormRequests, initialZoom, undefined);
-        const clusters = clusterRequests(visibleRequests, 100); // 100 metros de distancia máxima
-        debugLog(`Generated initial clusters with zoom ${initialZoom}:`, clusters);
-        setMarkerClusters(clusters);
+        // Materiales filtrables: solo los que existen en solicitudes reales cargadas.
+        const materialMap = new Map<number, Material>();
+        normalizedRequests.forEach((request: RecyclingRequest) => {
+          if (!materialMap.has(request.materialId)) {
+            materialMap.set(request.materialId, {
+              id: request.materialId,
+              name: request.materialName || getMaterialName(request.materialId, materialsArray)
+            });
+          }
+        });
 
-        // FORZAR DATOS PARA TESTING - TEMPORAL
-        if (clusters.length === 0) {
-          console.log('No clusters generated, forcing test data...');
-          const testClusters = [
-            {
-              id: 'test-1',
-              latitude: -17.393,
-              longitude: -66.157,
-              count: 1,
-              requests: [{
-                id: 999,
-                description: 'Botellas de plástico PET de prueba',
-                latitude: -17.393,
-                longitude: -66.157,
-                materialId: 1,
-                materialName: getMaterialName(1, materialsArray),
-                registerDate: '2025-01-01',
-                state: 'open'
-              }]
-            }
-          ];
-          setMarkerClusters(testClusters);
-        }
+        const requestMaterials = Array.from(materialMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        setMaterials(requestMaterials);
 
         // Mostrar notificación si está usando datos de fallback
         if (result.fallback) {
@@ -519,19 +500,8 @@ const RecyclingPointsMap: React.FC = () => {
       console.error('Error fetching requests:', err);
       setError('No se pudieron cargar los puntos de reciclaje');
 
-      // Asegurar que tenemos materiales para el fallback
-      let fallbackMaterialsArray = materialsArray;
-      if (!Array.isArray(fallbackMaterialsArray)) {
-        fallbackMaterialsArray = [
-          { id: 1, name: 'Plástico PET', description: 'Botellas de plástico' },
-          { id: 2, name: 'Cartón', description: 'Cajas de cartón' },
-          { id: 4, name: 'Vidrio', description: 'Botellas de vidrio' },
-          { id: 5, name: 'Metal', description: 'Latas de aluminio' }
-        ];
-      }
-      
-      // Actualizar el estado de materiales también en fallback
-      setMaterials(fallbackMaterialsArray);
+      // Si falla API principal, dejamos materiales vacíos para no mostrar opciones inventadas.
+      setMaterials([]);
 
       // Datos estáticos como fallback con algunos puntos cercanos para probar clustering
       const fallbackRequests = [
@@ -541,7 +511,7 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.393,
           longitude: -66.157,
           materialId: 2,
-          materialName: getMaterialName(2, fallbackMaterialsArray),
+          materialName: getMaterialName(2, materialsArray),
           registerDate: "2025-01-01",
           state: "open"
         },
@@ -551,7 +521,7 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.3931, // Muy cerca del punto 1
           longitude: -66.1571,
           materialId: 1,
-          materialName: getMaterialName(1, fallbackMaterialsArray),
+          materialName: getMaterialName(1, materialsArray),
           registerDate: "2025-01-01",
           state: "open"
         },
@@ -561,7 +531,7 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.3929, // También cerca del punto 1
           longitude: -66.1569,
           materialId: 2,
-          materialName: getMaterialName(2, fallbackMaterialsArray),
+          materialName: getMaterialName(2, materialsArray),
           registerDate: "2025-01-02",
           state: "open"
         },
@@ -571,7 +541,7 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.400,
           longitude: -66.150,
           materialId: 5,
-          materialName: getMaterialName(5, fallbackMaterialsArray),
+          materialName: getMaterialName(5, materialsArray),
           registerDate: "2025-01-01",
           state: "open"
         },
@@ -581,7 +551,7 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.390,
           longitude: -66.145,
           materialId: 4,
-          materialName: getMaterialName(4, fallbackMaterialsArray),
+          materialName: getMaterialName(4, materialsArray),
           registerDate: "2025-01-01",
           state: "open"
         },
@@ -591,45 +561,13 @@ const RecyclingPointsMap: React.FC = () => {
           latitude: -17.3901, // Cerca del punto 5
           longitude: -66.1451,
           materialId: 1,
-          materialName: getMaterialName(1, fallbackMaterialsArray),
+          materialName: getMaterialName(1, materialsArray),
           registerDate: "2025-01-03",
           state: "open"
         }
       ];
 
       setRecyclingRequests(fallbackRequests);
-
-      // Generar clusters para los datos de fallback considerando zoom inicial
-      const initialZoom = config.map.defaultZoom;
-      const visibleFallbackRequests = getVisibleRequests(fallbackRequests, initialZoom, undefined);
-      const fallbackClusters = clusterRequests(visibleFallbackRequests, 100);
-      debugLog(`Generated fallback clusters with zoom ${initialZoom}:`, fallbackClusters);
-      setMarkerClusters(fallbackClusters);
-
-      // FORZAR DATOS PARA TESTING - TEMPORAL (fallback)
-      if (fallbackClusters.length === 0) {
-        console.log('No fallback clusters generated, forcing test data...');
-        // Usar los materiales de fallback que se obtuvieron antes
-        const testClusters = [
-          {
-            id: 'test-fallback-1',
-            latitude: -17.393,
-            longitude: -66.157,
-            count: 1,
-            requests: [{
-              id: 998,
-              description: 'Cajas de cartón de prueba',
-              latitude: -17.393,
-              longitude: -66.157,
-              materialId: 2,
-              materialName: getMaterialName(2, fallbackMaterialsArray),
-              registerDate: '2025-01-01',
-              state: 'open'
-            }]
-          }
-        ];
-        setMarkerClusters(testClusters);
-      }
     } finally {
       setLoading(false);
     }
@@ -641,13 +579,41 @@ const RecyclingPointsMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Re-cluster when filters change
-    if (recyclingRequests.length > 0) {
-      const filtered = applyFilters(recyclingRequests);
-      const visible = getVisibleRequests(filtered, config.map.defaultZoom, undefined);
-      setMarkerClusters(clusterRequests(visible, 100));
+    if (recyclingRequests.length === 0) {
+      setMarkerClusters([]);
+      return;
     }
-  }, [filters]);
+
+    const filtered = applyFilters(recyclingRequests);
+    const visible = getVisibleRequests(filtered, mapView.zoom, mapView.bounds || undefined);
+    const clusterDistance = mapView.zoom >= config.clustering.minZoom ? 50 : config.clustering.maxDistance;
+    const updatedClusters = clusterRequests(visible, clusterDistance);
+    setMarkerClusters(updatedClusters);
+
+    debugLog('Clusters recalculated after filter/view change', {
+      totalRequests: recyclingRequests.length,
+      filteredRequests: filtered.length,
+      visibleRequests: visible.length,
+      clusters: updatedClusters.length,
+      zoom: mapView.zoom,
+      hasBounds: Boolean(mapView.bounds)
+    });
+  }, [filters, recyclingRequests, mapView]);
+
+  useEffect(() => {
+    if (!selectedRequestId || recyclingRequests.length === 0) {
+      return;
+    }
+
+    const filteredRequests = applyFilters(recyclingRequests);
+    const stillVisibleByFilter = filteredRequests.some((request) => request.id === selectedRequestId);
+
+    if (!stillVisibleByFilter) {
+      setSelectedRequest(null);
+      setSelectedRequestId(null);
+      setLoadingRequestDetail(false);
+    }
+  }, [filters, recyclingRequests, selectedRequestId]);
 
   useEffect(() => {
     if (!selectedRequestId) {
@@ -741,6 +707,8 @@ const RecyclingPointsMap: React.FC = () => {
 
   const selectedPhone = selectedRequest?.userPhone || 'No disponible';
 
+  const availableRequestsCount = useMemo(() => applyFilters(recyclingRequests).length, [recyclingRequests, filters]);
+
 
   if (loading) {
     return (
@@ -760,7 +728,9 @@ const RecyclingPointsMap: React.FC = () => {
       <div className="map-fullscreen">
         <div className="map-stage fullscreen">
           <div className="map-info-card basic">
-            <span className="map-info-text">Selecciona un marcador para ver los detalles</span>
+            <span className="map-info-text">
+              {availableRequestsCount} solicitudes disponibles{hasActiveFilters ? ' (filtradas)' : ''}
+            </span>
           </div>
 
           <button
