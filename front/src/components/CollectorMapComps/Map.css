@@ -54,6 +54,15 @@
   white-space: nowrap;
 }
 
+.map-info-subtext {
+  display: block;
+  margin-top: 0.2rem;
+  color: #4a7c59;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .filter-trigger {
   border: none;
   border-radius: 999px;

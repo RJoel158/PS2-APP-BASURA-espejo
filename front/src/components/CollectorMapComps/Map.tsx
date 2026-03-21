@@ -731,6 +731,7 @@ const RecyclingPointsMap: React.FC = () => {
             <span className="map-info-text">
               {availableRequestsCount} solicitudes disponibles{hasActiveFilters ? ' (filtradas)' : ''}
             </span>
+            <span className="map-info-subtext">Selecciona un marcador para abrir los detalles.</span>
           </div>
 
           <button
