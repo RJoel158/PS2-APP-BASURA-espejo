@@ -32,7 +32,7 @@ interface Material {
   state?: number;
 }
 
-type FormData = {
+type RequestFormState = {
   materialId: number;
   description: string;
   photos: File[];
@@ -55,7 +55,7 @@ const FormComp: React.FC = () => {
   const [locating, setLocating] = useState(false); // Estado para geolocalización en progreso
   const [mensaje, setMensaje] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<RequestFormState>({
     materialId: 0,
     description: '',
     photos: [],

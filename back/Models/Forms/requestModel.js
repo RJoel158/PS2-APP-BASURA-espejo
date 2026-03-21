@@ -76,9 +76,28 @@ export const getById = async (id) => {
       `SELECT r.id, r.idUser, r.description, r.state, r.registerDate, r.materialId, 
               r.latitude, r.longitude, r.modificationDate,
               u.email as userEmail,
-              m.name as materialName
+              u.phone as userPhone,
+              m.name as materialName,
+              COALESCE(
+                NULLIF(TRIM(CONCAT(p.firstname, ' ', p.lastname)), ''),
+                NULLIF(TRIM(i.companyName), '')
+              ) as requesterName,
+              COALESCE(score_agg.averageRating, 0) as averageRating,
+              COALESCE(score_agg.totalRatings, 0) as totalRatings
        FROM request r
        LEFT JOIN users u ON r.idUser = u.id
+      LEFT JOIN person p ON p.userId = u.id
+      LEFT JOIN institution i ON i.userId = u.id
+       LEFT JOIN (
+         SELECT 
+           ratedToUserId,
+           COUNT(*) as totalRatings,
+           ROUND(AVG(rating), 2) as averageRating
+         FROM score
+         WHERE state = 1
+           AND rating IS NOT NULL
+         GROUP BY ratedToUserId
+       ) as score_agg ON score_agg.ratedToUserId = u.id
        LEFT JOIN material m ON r.materialId = m.id
        WHERE r.id = ?`,
       [id]

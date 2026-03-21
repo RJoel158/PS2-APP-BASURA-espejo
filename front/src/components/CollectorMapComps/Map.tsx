@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Map.css';
 import SchedulePickupModal from '../SchedulePickupComp/SchedulePickupModal';
+import ImageCarousel from '../SchedulePickupComp/ImageCarousel';
+import ReportRequestModal from '../ReportModalComp/ReportRequestModal';
 import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
@@ -65,8 +66,24 @@ interface RecyclingRequest {
   longitude: number;
   materialId: number;
   materialName?: string;
+  requesterName?: string;
+  averageRating?: number;
+  totalRatings?: number;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  images?: RequestImage[];
+  idUser?: number;
+  days?: string[];
+  schedule?: unknown;
   registerDate: string;
   state: string;
+}
+
+interface RequestImage {
+  id: number;
+  image: string;
+  uploadedDate: string;
 }
 
 // Interfaz para clusters de marcadores
@@ -86,19 +103,23 @@ interface Material {
 }
 
 const RecyclingPointsMap: React.FC = () => {
-  const navigate = useNavigate();
   const [recyclingRequests, setRecyclingRequests] = useState<RecyclingRequest[]>([]);
   const [markerClusters, setMarkerClusters] = useState<MarkerCluster[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<RecyclingRequest | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [loadingRequestDetail, setLoadingRequestDetail] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
   //Para controlar el modal de Schedule Pickup
   const [showPickupModal, setShowPickupModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // States para filtrado
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState({ materialId: '', day: '' });
+  const activeFilterCount = Number(Boolean(filters.materialId)) + Number(Boolean(filters.day));
+  const hasActiveFilters = activeFilterCount > 0;
 
   const applyFilters = (requests: RecyclingRequest[]) => {
     return requests.filter(req => {
@@ -119,6 +140,27 @@ const RecyclingPointsMap: React.FC = () => {
       }
       return matchMaterial && matchDay;
     });
+  };
+
+  const normalizeImages = (images: unknown): RequestImage[] => {
+    if (!Array.isArray(images)) {
+      return [];
+    }
+
+    return images
+      .map((item: any, index: number) => {
+        const imagePath = typeof item?.image === 'string' ? item.image : '';
+        if (!imagePath) {
+          return null;
+        }
+
+        return {
+          id: typeof item?.id === 'number' ? item.id : index + 1,
+          image: imagePath,
+          uploadedDate: typeof item?.uploadedDate === 'string' ? item.uploadedDate : ''
+        };
+      })
+      .filter((item): item is RequestImage => item !== null);
   };
 
   // Función para calcular la distancia entre dos puntos en metros
@@ -413,7 +455,8 @@ const RecyclingPointsMap: React.FC = () => {
           const normalizedRequest = {
             ...request,
             latitude: parseFloat(request.latitude),
-            longitude: parseFloat(request.longitude)
+            longitude: parseFloat(request.longitude),
+            images: normalizeImages(request.images)
           };
 
           console.log('Normalized request:', {
@@ -606,6 +649,98 @@ const RecyclingPointsMap: React.FC = () => {
     }
   }, [filters]);
 
+  useEffect(() => {
+    if (!selectedRequestId) {
+      setSelectedRequest(null);
+      setLoadingRequestDetail(false);
+      return;
+    }
+
+    let isActive = true;
+
+    const fetchRequestDetails = async () => {
+      try {
+        setLoadingRequestDetail(true);
+        setSelectedRequest(null);
+
+        const response = await fetch(apiUrl(`/api/request/${selectedRequestId}`));
+        if (!response.ok) {
+          if (isActive) {
+            setLoadingRequestDetail(false);
+          }
+          return;
+        }
+
+        const result = await response.json();
+        if (!result?.success || !result?.data || !isActive) {
+          if (isActive) {
+            setLoadingRequestDetail(false);
+          }
+          return;
+        }
+
+        const requestDetails = result.data;
+        const updatedRequest: RecyclingRequest = {
+          ...requestDetails,
+          latitude: Number.isFinite(parseFloat(requestDetails.latitude))
+            ? parseFloat(requestDetails.latitude)
+            : 0,
+          longitude: Number.isFinite(parseFloat(requestDetails.longitude))
+            ? parseFloat(requestDetails.longitude)
+            : 0,
+          images: normalizeImages(requestDetails.images)
+        };
+
+        // Pequeña espera para evitar flicker visual y simular carga consistente.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+
+        if (!isActive) {
+          return;
+        }
+
+        setSelectedRequest(updatedRequest);
+        setLoadingRequestDetail(false);
+      } catch (detailError) {
+        if (isActive) {
+          setLoadingRequestDetail(false);
+        }
+        debugLog('No se pudo cargar detalle de solicitud para sidebar', detailError);
+      }
+    };
+
+    fetchRequestDetails();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedRequestId]);
+
+  const selectedMaterialName = selectedRequest
+    ? (selectedRequest.materialName || getMaterialName(selectedRequest.materialId, materials))
+    : '';
+
+  const selectedDate = selectedRequest
+    ? new Date(selectedRequest.registerDate).toLocaleDateString()
+    : '';
+
+  const selectedRequesterName = selectedRequest
+    ? (selectedRequest.requesterName || (selectedRequest.idUser ? `Usuario #${selectedRequest.idUser}` : 'No disponible'))
+    : 'No disponible';
+
+  const selectedAverageRating = selectedRequest
+    ? Number(selectedRequest.averageRating || 0)
+    : 0;
+
+  const selectedTotalRatings = selectedRequest
+    ? Number(selectedRequest.totalRatings || 0)
+    : 0;
+
+  const directionsUrl = selectedRequest
+    ? `https://www.google.com/maps/dir/?api=1&destination=${selectedRequest.latitude},${selectedRequest.longitude}&travelmode=driving`
+    : '';
+
+  const selectedPhone = selectedRequest?.userPhone || 'No disponible';
+
 
   if (loading) {
     return (
@@ -622,174 +757,306 @@ const RecyclingPointsMap: React.FC = () => {
 
   return (
     <div className="recycling-points-container">
-      {/* Botón de retorno */}
-      <button
-        onClick={() => navigate(-1)}
-        className="back-button"
-        title="Volver atrás"
-      >
-        ← Volver
-      </button>
+      <div className="map-fullscreen">
+        <div className="map-stage fullscreen">
+          <div className="map-info-card basic">
+            <span className="map-info-text">Selecciona un marcador para ver los detalles</span>
+          </div>
 
-        <div className="recycling-points-header" style={{ position: 'relative' }}>
-        <h1 className="recycling-points-title">Puntos de Reciclaje</h1>
-        <p className="recycling-points-subtitle">Personas que ofrecen material para reciclar</p>
-        
-        <button 
-          onClick={() => setShowFilterModal(true)}
-          style={{ position: 'absolute', right: '10px', top: '10px', padding: '8px 12px', background: '#3b82f6', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-          Filtrar
-        </button>
+          <button
+            type="button"
+            className={`filter-trigger map-filter ${hasActiveFilters ? 'active' : ''}`}
+            onClick={() => setShowFilterModal(true)}
+          >
+            <span>Filtrar</span>
+            {hasActiveFilters && (
+              <span className="filter-badge">{activeFilterCount}</span>
+            )}
+          </button>
 
-        {error && (
-          <div className="error-message">
+          <div className="map-container fullscreen">
+              <MapContainer
+                center={[config.map.defaultCenter.lat, config.map.defaultCenter.lng]}
+                zoom={config.map.defaultZoom}
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={true}
+              >
+                <TileLayer
+                  attribution={config.map.attribution}
+                  url={config.map.tileUrl}
+                  maxZoom={config.clustering.maxZoom}
+                  tileSize={256}
+                />
+                
+                <MapEventHandler />
+
+                {markerClusters
+                  .filter(cluster => !isNaN(cluster.latitude) && !isNaN(cluster.longitude))
+                  .map((cluster) => (
+                    <Marker
+                      key={cluster.id}
+                      position={[cluster.latitude, cluster.longitude]}
+                      icon={cluster.count > 1 ? createClusterIcon(cluster.count) : recyclingIcon}
+
+                      eventHandlers={{
+                        click: () => {
+                          if (cluster.count === 1) {
+                            setSelectedRequestId(cluster.requests[0].id);
+                          }
+                        }
+                      }}
+                    >
+
+                      {cluster.count > 1 && (
+                        <Popup className="custom-popup">
+                          <div className="popup-content">
+                            <>
+                              <h4>{cluster.count} Materiales Disponibles</h4>
+                              <div className="cluster-requests-list">
+                                {cluster.requests.map((request) => {
+                                  const displayName = request.materialName || getMaterialName(request.materialId, materials);
+                                  
+                                  return (
+                                  <div key={request.id} className="cluster-request-item">
+                                    <div className="request-info">
+                                      <p><strong>{displayName}</strong></p>
+                                      <small>{new Date(request.registerDate).toLocaleDateString()}</small>
+                                    </div>
+                                    <button 
+                                      className="view-request-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedRequestId(request.id);
+                                      }}
+                                    >
+                                      Ver Detalles
+                                    </button>
+                                  </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="cluster-actions">
+                                <small>Selecciona un material para ver más detalles</small>
+                              </div>
+                            </>
+                          </div>
+                        </Popup>
+                      )}
+                    </Marker>
+                  ))}
+              </MapContainer>
+
+            {error && error.includes('ℹ️') && (
+              <div className="db-status-indicator">
+                <span className="status-dot offline"></span>
+                <small>Modo offline - Datos de demostración</small>
+              </div>
+            )}
+          </div>
+
+          {(selectedRequestId !== null || selectedRequest) && (
+            <aside className="request-sidebar map-sidebar">
+              <div className="request-sidebar-header">
+                <div className="request-sidebar-header-main">
+                  <h3>Detalle de solicitud</h3>
+                  <button
+                    type="button"
+                    className="header-report-btn"
+                    onClick={() => setShowReportModal(true)}
+                    title="Reportar solicitud"
+                    disabled={!selectedRequest || loadingRequestDetail}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M12 2L1 21h22L12 2zm0 5.5a1 1 0 011 1v6a1 1 0 11-2 0v-6a1 1 0 011-1zm0 11a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" />
+                    </svg>
+                    Reportar
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="sidebar-close-btn"
+                  onClick={() => {
+                    setSelectedRequest(null);
+                    setSelectedRequestId(null);
+                    setLoadingRequestDetail(false);
+                  }}
+                  title="Quitar selección"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {loadingRequestDetail && (
+                <div className="request-sidebar-loading">
+                  <div className="request-sidebar-loading-spinner" />
+                  <p>Cargando detalle de la solicitud...</p>
+                </div>
+              )}
+
+              {!loadingRequestDetail && selectedRequest && (
+                <>
+
+              <div className="request-sidebar-content">
+                <div className="sidebar-pill-row">
+                  <span className="sidebar-pill material">{selectedMaterialName}</span>
+                  <span className="sidebar-pill state">Disponible</span>
+                </div>
+
+                <div className="sidebar-field sidebar-image-block">
+                  <span className="sidebar-label">Imagenes</span>
+                  <ImageCarousel
+                    images={selectedRequest.images || []}
+                    altText={`Solicitud #${selectedRequest.id} - ${selectedMaterialName || 'Material reciclable'}`}
+                  />
+                </div>
+
+                <div className="sidebar-field">
+                  <span className="sidebar-label">Descripción</span>
+                  <p>{selectedRequest.description || 'Sin descripción'}</p>
+                </div>
+
+                <div className="sidebar-grid">
+                  <div className="sidebar-card">
+                    <span className="sidebar-label">Fecha</span>
+                    <strong>{selectedDate}</strong>
+                  </div>
+                  <div className="sidebar-card">
+                    <span className="sidebar-label">Celular</span>
+                    <strong className="sidebar-phone">{selectedPhone}</strong>
+                  </div>
+                </div>
+
+                <div className="sidebar-field">
+                  <span className="sidebar-label">Solicitante</span>
+                  <p className="sidebar-requester">{selectedRequesterName}</p>
+                </div>
+
+                <div className="sidebar-field">
+                  <span className="sidebar-label">Calificacion promedio</span>
+                  <p className="sidebar-rating-value">
+                    {selectedAverageRating.toFixed(2)} / 5.00
+                    <span className="sidebar-rating-count">({selectedTotalRatings} calificaciones)</span>
+                  </p>
+                </div>
+
+                <div className="sidebar-field">
+                  <span className="sidebar-label">Cómo llegar</span>
+                  <a
+                    className="sidebar-link"
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Abrir ruta en Google Maps
+                  </a>
+                </div>
+              </div>
+
+              <div className="request-sidebar-actions">
+                <button
+                  type="button"
+                  className="sidebar-action-btn"
+                  onClick={() => setShowPickupModal(true)}
+                >
+                  Programar recojo
+                </button>
+              </div>
+              </>
+              )}
+            </aside>
+          )}
+        </div>
+
+        {error && !error.includes('ℹ️') && (
+          <div className="error-message map-error-inline">
             <p>{error}</p>
-            <button onClick={fetchActiveRequests} className="retry-button">
+            <button type="button" className="retry-button" onClick={fetchActiveRequests}>
               Reintentar
             </button>
           </div>
         )}
-      </div>      <div className="recycling-map-wrapper">
-        <div className="map-info-card">
-          <div className="map-info-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor" />
-            </svg>
-          </div>
-          <span className="map-info-text">Aquí puedes recoger los objetos</span>
-        </div>
+      </div>
 
-        <div className="map-container">
-            <MapContainer
-              center={[config.map.defaultCenter.lat, config.map.defaultCenter.lng]}
-              zoom={config.map.defaultZoom}
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={true}
-            >
-              <TileLayer
-                attribution={config.map.attribution}
-                url={config.map.tileUrl}
-                maxZoom={config.clustering.maxZoom}
-                tileSize={256}
-              />
-              
-              <MapEventHandler />
+        {showPickupModal && selectedRequest && (
+          <SchedulePickupModal
+            show={showPickupModal}
+            onClose={() => setShowPickupModal(false)}
+            selectedRequest={selectedRequest}
+            onScheduleSuccess={() => fetchActiveRequests()}
+          />
+        )}
 
-              {markerClusters
-                .filter(cluster => !isNaN(cluster.latitude) && !isNaN(cluster.longitude))
-                .map((cluster) => (
-                  <Marker
-                    key={cluster.id}
-                    position={[cluster.latitude, cluster.longitude]}
-                    icon={cluster.count > 1 ? createClusterIcon(cluster.count) : recyclingIcon}
+        {showReportModal && selectedRequest && (
+          <ReportRequestModal
+            show={showReportModal}
+            requestId={selectedRequest.id}
+            onClose={() => setShowReportModal(false)}
+            onSubmit={() => {
+              setShowReportModal(false);
+            }}
+          />
+        )}
 
-                    eventHandlers={{
-                      click: () => {
-                        if (cluster.count === 1) {
-                          // abrir modal en marcador individual, se envia al modal el request completo
-                          setSelectedRequest(cluster.requests[0]);
-                          setShowPickupModal(true);
-                        }
-                      }
-                    }}
-                  >
+        {showFilterModal && (
+          <div className="filter-modal-overlay" onClick={() => setShowFilterModal(false)}>
+            <div className="filter-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="filter-modal-header">
+                <h3>Opciones de Filtrado</h3>
+              </div>
 
-                    {cluster.count > 1 && (
-                      <Popup className="custom-popup">
-                        <div className="popup-content">
-                          {/* Popup para cluster con múltiples requests */}
-                          <>
-                            <h4>{cluster.count} Materiales Disponibles</h4>
-                            <div className="cluster-requests-list">
-                              {cluster.requests.map((request) => {
-                                // Usar el materialName que ya viene del backend
-                                // Si por alguna razón no existe, usar getMaterialName como fallback
-                                const displayName = request.materialName || getMaterialName(request.materialId, materials);
-                                
-                                return (
-                                <div key={request.id} className="cluster-request-item">
-                                  <div className="request-info">
-                                    <p><strong>{displayName}</strong></p>
-                                    <small>{new Date(request.registerDate).toLocaleDateString()}</small>
-                                  </div>
-                                  <button 
-                                    className="view-request-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedRequest(request);
-                                      setShowPickupModal(true);
-                                    }}
-                                  >
-                                    Ver Detalles
-                                  </button>
-                                </div>
-                                );
-                              })}
-                            </div>
-                            <div className="cluster-actions">
-                              <small>Selecciona un material para ver más detalles</small>
-                            </div>
-                          </>
+              <div className="filter-group">
+                <label htmlFor="filter-material">Material:</label>
+                <select
+                  id="filter-material"
+                  className="filter-select"
+                  value={filters.materialId}
+                  onChange={(e)=>setFilters({...filters, materialId: e.target.value})}
+                >
+                  <option value="">Todos los materiales</option>
+                  {materials.map(m => (<option key={m.id} value={m.id}>{m.name}</option>))}
+                </select>
+              </div>
 
+              <div className="filter-group">
+                <label htmlFor="filter-day">Día disponible:</label>
+                <select
+                  id="filter-day"
+                  className="filter-select"
+                  value={filters.day}
+                  onChange={(e)=>setFilters({...filters, day: e.target.value})}
+                >
+                  <option value="">Cualquier día</option>
+                  <option value="lun">Lunes</option>
+                  <option value="mar">Martes</option>
+                  <option value="mie">Miércoles</option>
+                  <option value="jue">Jueves</option>
+                  <option value="vie">Viernes</option>
+                  <option value="sab">Sábado</option>
+                  <option value="dom">Domingo</option>
+                </select>
+              </div>
 
-                        </div>
-                      </Popup>
-                    )}
-                  </Marker>
-                ))}
-            </MapContainer>
-          {showPickupModal && selectedRequest && (
-            <SchedulePickupModal
-              show={showPickupModal}
-              onClose={() => setShowPickupModal(false)}
-              selectedRequest={selectedRequest}
-              onScheduleSuccess={() => fetchActiveRequests()}
-            />
-          )}
-          {showFilterModal && (
-            <div style={{position:"absolute", top:0, left:0, width:"100%", height:"100%", backgroundColor:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", justifyContent:"center", alignItems:"center"}}>
-              <div style={{background:"white", padding:"20px", borderRadius:"8px", width:"90%", maxWidth:"350px"}}>
-                <h3 style={{marginTop:0, marginBottom:"15px", color:"#333"}}>Opciones de Filtrado</h3>
-                <div style={{marginBottom:"15px"}}>
-                  <label style={{display:"block", marginBottom:"5px", fontWeight:"bold"}}>Material:</label>
-                  <select style={{width:"100%", padding:"8px", borderRadius:"4px", border:"1px solid #ccc"}} value={filters.materialId} onChange={(e)=>setFilters({...filters, materialId: e.target.value})}>
-                    <option value="">Todos los materiales</option>
-                    {materials.map(m => (<option key={m.id} value={m.id}>{m.name}</option>))}
-                  </select>
-                </div>
-                <div style={{marginBottom:"20px"}}>
-                  <label style={{display:"block", marginBottom:"5px", fontWeight:"bold"}}>Día disponible:</label>
-                  <select style={{width:"100%", padding:"8px", borderRadius:"4px", border:"1px solid #ccc"}} value={filters.day} onChange={(e)=>setFilters({...filters, day: e.target.value})}>
-                    <option value="">Cualquier día</option>
-                    <option value="lun">Lunes</option>
-                    <option value="mar">Martes</option>
-                    <option value="mie">Miércoles</option>
-                    <option value="jue">Jueves</option>
-                    <option value="vie">Viernes</option>
-                    <option value="sab">Sábado</option>
-                    <option value="dom">Domingo</option>
-                  </select>
-                </div>
-                <div style={{display:"flex", justifyContent:"space-between", gap:"10px"}}>
-                  <button onClick={()=>{setFilters({materialId:"", day:""}); setShowFilterModal(false);}} style={{padding:"8px", background:"#f3f4f6", border:"none", borderRadius:"4px", cursor:"pointer", flex:1}}>Limpiar</button>
-                  <button onClick={()=>setShowFilterModal(false)} style={{padding:"8px", background:"#3b82f6", color:"white", border:"none", borderRadius:"4px", cursor:"pointer", flex:1}}>Aplicar</button>
-                </div>
+              <div className="filter-actions">
+                <button
+                  type="button"
+                  className="filter-clear-btn"
+                  onClick={()=>{setFilters({materialId:"", day:""}); setShowFilterModal(false);}}
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  className="filter-apply-btn"
+                  onClick={()=>setShowFilterModal(false)}
+                >
+                  Aplicar
+                </button>
               </div>
             </div>
-          )}
-
-          {error && error.includes('ℹ️') && (
-            <div className="db-status-indicator">
-              <span className="status-dot offline"></span>
-              <small>Modo offline - Datos de demostración</small>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
     </div>
   );
 };
 
 export default RecyclingPointsMap;
-// Fix missing effect manually later
