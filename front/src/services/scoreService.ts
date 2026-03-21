@@ -99,6 +99,6 @@ export const getUserAverageRating = async (userId: number): Promise<UserRating> 
     return response.data.data;
   } catch (error) {
     console.error('[scoreService] Error getting user average rating:', error);
-    return { totalRatings: 0, averageScore: 0 };
+    return { totalRatings: 0, averageRating: 0 };
   }
 };

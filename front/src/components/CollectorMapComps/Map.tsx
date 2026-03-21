@@ -612,6 +612,7 @@ const RecyclingPointsMap: React.FC = () => {
       setSelectedRequest(null);
       setSelectedRequestId(null);
       setLoadingRequestDetail(false);
+      setShowPickupModal(false);
     }
   }, [filters, recyclingRequests, selectedRequestId]);
 
@@ -619,6 +620,7 @@ const RecyclingPointsMap: React.FC = () => {
     if (!selectedRequestId) {
       setSelectedRequest(null);
       setLoadingRequestDetail(false);
+      setShowPickupModal(false);
       return;
     }
 
@@ -750,7 +752,7 @@ const RecyclingPointsMap: React.FC = () => {
                 center={[config.map.defaultCenter.lat, config.map.defaultCenter.lng]}
                 zoom={config.map.defaultZoom}
                 style={{ height: '100%', width: '100%' }}
-                zoomControl={true}
+                zoomControl={false}
               >
                 <TileLayer
                   attribution={config.map.attribution}
@@ -773,6 +775,7 @@ const RecyclingPointsMap: React.FC = () => {
                         click: () => {
                           if (cluster.count === 1) {
                             setSelectedRequestId(cluster.requests[0].id);
+                            setShowPickupModal(false);
                           }
                         }
                       }}
@@ -798,6 +801,7 @@ const RecyclingPointsMap: React.FC = () => {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedRequestId(request.id);
+                                        setShowPickupModal(false);
                                       }}
                                     >
                                       Ver Detalles
@@ -850,6 +854,7 @@ const RecyclingPointsMap: React.FC = () => {
                     setSelectedRequest(null);
                     setSelectedRequestId(null);
                     setLoadingRequestDetail(false);
+                    setShowPickupModal(false);
                   }}
                   title="Quitar selección"
                 >
@@ -866,72 +871,85 @@ const RecyclingPointsMap: React.FC = () => {
 
               {!loadingRequestDetail && selectedRequest && (
                 <>
+                  {showPickupModal ? (
+                    <div className="request-sidebar-content schedule-view">
+                      <SchedulePickupModal
+                        show={showPickupModal}
+                        onClose={() => setShowPickupModal(false)}
+                        selectedRequest={selectedRequest}
+                        onScheduleSuccess={() => fetchActiveRequests()}
+                        variant="inline"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="request-sidebar-content">
+                        <div className="sidebar-pill-row">
+                          <span className="sidebar-pill material">{selectedMaterialName}</span>
+                          <span className="sidebar-pill state">Disponible</span>
+                        </div>
 
-              <div className="request-sidebar-content">
-                <div className="sidebar-pill-row">
-                  <span className="sidebar-pill material">{selectedMaterialName}</span>
-                  <span className="sidebar-pill state">Disponible</span>
-                </div>
+                        <div className="sidebar-field sidebar-image-block">
+                          <span className="sidebar-label">Imagenes</span>
+                          <ImageCarousel
+                            images={selectedRequest.images || []}
+                            altText={`Solicitud #${selectedRequest.id} - ${selectedMaterialName || 'Material reciclable'}`}
+                          />
+                        </div>
 
-                <div className="sidebar-field sidebar-image-block">
-                  <span className="sidebar-label">Imagenes</span>
-                  <ImageCarousel
-                    images={selectedRequest.images || []}
-                    altText={`Solicitud #${selectedRequest.id} - ${selectedMaterialName || 'Material reciclable'}`}
-                  />
-                </div>
+                        <div className="sidebar-field">
+                          <span className="sidebar-label">Descripción</span>
+                          <p>{selectedRequest.description || 'Sin descripción'}</p>
+                        </div>
 
-                <div className="sidebar-field">
-                  <span className="sidebar-label">Descripción</span>
-                  <p>{selectedRequest.description || 'Sin descripción'}</p>
-                </div>
+                        <div className="sidebar-grid">
+                          <div className="sidebar-card">
+                            <span className="sidebar-label">Fecha</span>
+                            <strong>{selectedDate}</strong>
+                          </div>
+                          <div className="sidebar-card">
+                            <span className="sidebar-label">Celular</span>
+                            <strong className="sidebar-phone">{selectedPhone}</strong>
+                          </div>
+                        </div>
 
-                <div className="sidebar-grid">
-                  <div className="sidebar-card">
-                    <span className="sidebar-label">Fecha</span>
-                    <strong>{selectedDate}</strong>
-                  </div>
-                  <div className="sidebar-card">
-                    <span className="sidebar-label">Celular</span>
-                    <strong className="sidebar-phone">{selectedPhone}</strong>
-                  </div>
-                </div>
+                        <div className="sidebar-field">
+                          <span className="sidebar-label">Solicitante</span>
+                          <p className="sidebar-requester">{selectedRequesterName}</p>
+                        </div>
 
-                <div className="sidebar-field">
-                  <span className="sidebar-label">Solicitante</span>
-                  <p className="sidebar-requester">{selectedRequesterName}</p>
-                </div>
+                        <div className="sidebar-field">
+                          <span className="sidebar-label">Calificacion promedio</span>
+                          <p className="sidebar-rating-value">
+                            {selectedAverageRating.toFixed(2)} / 5.00
+                            <span className="sidebar-rating-count">({selectedTotalRatings} calificaciones)</span>
+                          </p>
+                        </div>
 
-                <div className="sidebar-field">
-                  <span className="sidebar-label">Calificacion promedio</span>
-                  <p className="sidebar-rating-value">
-                    {selectedAverageRating.toFixed(2)} / 5.00
-                    <span className="sidebar-rating-count">({selectedTotalRatings} calificaciones)</span>
-                  </p>
-                </div>
+                        <div className="sidebar-field">
+                          <span className="sidebar-label">Cómo llegar</span>
+                          <a
+                            className="sidebar-link"
+                            href={directionsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Abrir ruta en Google Maps
+                          </a>
+                        </div>
+                      </div>
 
-                <div className="sidebar-field">
-                  <span className="sidebar-label">Cómo llegar</span>
-                  <a
-                    className="sidebar-link"
-                    href={directionsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Abrir ruta en Google Maps
-                  </a>
-                </div>
-              </div>
-
-              <div className="request-sidebar-actions">
-                <button
-                  type="button"
-                  className="sidebar-action-btn"
-                  onClick={() => setShowPickupModal(true)}
-                >
-                  Programar recojo
-                </button>
-              </div>
+                      <div className="request-sidebar-actions">
+                        <button
+                          type="button"
+                          className="sidebar-action-btn"
+                          onClick={() => setShowPickupModal(true)}
+                        >
+                          Programar recojo
+                        </button>
+                      </div>
+                    </>
+                  )}
               </>
               )}
             </aside>
@@ -947,15 +965,6 @@ const RecyclingPointsMap: React.FC = () => {
           </div>
         )}
       </div>
-
-        {showPickupModal && selectedRequest && (
-          <SchedulePickupModal
-            show={showPickupModal}
-            onClose={() => setShowPickupModal(false)}
-            selectedRequest={selectedRequest}
-            onScheduleSuccess={() => fetchActiveRequests()}
-          />
-        )}
 
         {showReportModal && selectedRequest && (
           <ReportRequestModal

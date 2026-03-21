@@ -74,7 +74,7 @@ const SimplePickupMap: React.FC<SimplePickupMapProps> = ({
           minHeight: '400px',
           zIndex: 1
         }}
-        zoomControl={true}
+        zoomControl={false}
         scrollWheelZoom={true}
         whenReady={() => {
           if (mapRef.current) {
@@ -96,5 +96,4 @@ const SimplePickupMap: React.FC<SimplePickupMapProps> = ({
     </div>
   );
 };
-
 export default SimplePickupMap;

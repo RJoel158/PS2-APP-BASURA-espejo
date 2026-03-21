@@ -101,9 +101,24 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
     }
 
-    // 🔐 validar contraseña encriptada
-    console.log("[INFO] Comparing password with hash");
-    const validPass = await bcrypt.compare(password, user.password);
+    // Soporta hashes bcrypt y usuarios legacy con contraseña en texto plano.
+    const storedPassword = user.password;
+    if (!storedPassword || typeof storedPassword !== "string") {
+      console.warn("[WARN] loginUser - invalid stored password", { email, userId: user.id });
+      return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
+    }
+
+    const isBcryptHash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(storedPassword);
+    let validPass = false;
+
+    if (isBcryptHash) {
+      console.log("[INFO] Comparing password with bcrypt hash");
+      validPass = await bcrypt.compare(password, storedPassword);
+    } else {
+      console.warn("[WARN] loginUser - legacy/plain password detected", { email, userId: user.id });
+      validPass = password === storedPassword;
+    }
+
     if (!validPass) {
       console.warn("[WARN] loginUser - invalid password for", { email });
         return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });

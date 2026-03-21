@@ -46,7 +46,7 @@ const SimpleMap: React.FC<SimpleMapProps> = ({
             center={markerPosition || center}
             zoom={14}
             style={{ height: '100%', width: '100%' }}
-            zoomControl={true}
+            zoomControl={false}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'

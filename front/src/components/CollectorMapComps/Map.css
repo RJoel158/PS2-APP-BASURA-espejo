@@ -191,6 +191,10 @@
   overflow-y: auto;
 }
 
+.request-sidebar-content.schedule-view {
+  padding: 0.9rem;
+}
+
 .request-sidebar-loading {
   flex: 1;
   display: flex;
@@ -535,8 +539,7 @@
 }
 
 .map-container .leaflet-control-zoom {
-  border: none !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  display: none !important;
 }
 
 .map-container .leaflet-control-zoom a {
@@ -662,10 +665,12 @@
   }
 
   .filter-trigger.map-filter {
-    top: 64px;
+    top: auto;
+    bottom: 16px;
     right: 12px;
     padding: 0.42rem 0.75rem;
     font-size: 0.8rem;
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.28);
   }
 
   .request-sidebar.map-sidebar {

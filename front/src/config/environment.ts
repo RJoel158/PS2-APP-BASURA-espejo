@@ -13,6 +13,36 @@ if (missingEnvVars.length > 0) {
   console.error('❌ Variables de entorno requeridas faltantes:', missingEnvVars);
 }
 
+const resolveApiBaseUrl = (): string => {
+  const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  if (!configuredBaseUrl) return '';
+
+  try {
+    const parsed = new URL(configuredBaseUrl);
+    const isLoopbackTarget =
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '127.0.0.1' ||
+      parsed.hostname === '::1';
+
+    const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isCurrentHostLoopback =
+      currentHost === 'localhost' ||
+      currentHost === '127.0.0.1' ||
+      currentHost === '::1';
+
+    // En túneles (host público) no se puede llamar a loopback por políticas del navegador.
+    if (isLoopbackTarget && !isCurrentHostLoopback) {
+      console.warn('[environment] Ignorando VITE_API_BASE_URL loopback en host público. Se usará proxy relativo /api');
+      return '';
+    }
+  } catch (error) {
+    console.warn('[environment] VITE_API_BASE_URL inválida, se usará proxy relativo /api', error);
+    return '';
+  }
+
+  return configuredBaseUrl;
+};
+
 export const config = {
   // Información de la aplicación
   app: {
@@ -23,7 +53,7 @@ export const config = {
 
   // Configuración del API
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '',
+    baseUrl: resolveApiBaseUrl(),
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
     endpoints: {
       requests: '/api/request',
