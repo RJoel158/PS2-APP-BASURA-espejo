@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -133,6 +133,7 @@ const DAY_FILTER_OPTIONS = [
 ] as const;
 
 const RecyclingPointsMap: React.FC = () => {
+  const navigate = useNavigate();
   const location = useLocation();
   const locationState = (location.state as MapLocationState | null) || null;
   const [recyclingRequests, setRecyclingRequests] = useState<RecyclingRequest[]>([]);
@@ -811,6 +812,14 @@ const RecyclingPointsMap: React.FC = () => {
             </span>
             <span className="map-info-subtext">Selecciona un marcador para abrir los detalles.</span>
           </div>
+
+          <button
+            type="button"
+            className="map-back-btn"
+            onClick={() => navigate(-1)}
+          >
+            ← Volver
+          </button>
 
           <button
             type="button"
