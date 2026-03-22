@@ -42,6 +42,7 @@ import * as uploadController from '../Controllers/uploadController.js';
 import rankingController from '../Controllers/rankingController.js';
 import * as reportController from '../Controllers/reportController.js';
 import * as requestReportController from '../Controllers/requestReportController.js';
+import * as userMaterialController from '../Controllers/userMaterialController.js';
 
 // Configuración de multer para uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -128,6 +129,15 @@ router.get('/material', materialController.getMaterials);
 router.post('/material', materialController.createMaterial);
 router.put('/material/:id', materialController.updateMaterial);
 router.delete('/material/:id', materialController.deleteMaterial);
+
+// ==========================================
+// FAVORITOS DE MATERIALES (4 rutas)
+// ==========================================
+router.get('/user-materials/check/:userId/:materialId', userMaterialController.checkFavoriteMaterial);
+router.get('/user-materials/:userId/matching-requests-count', userMaterialController.getMatchingRequestsCount);
+router.get('/user-materials/:userId', userMaterialController.getUserFavoriteMaterials);
+router.post('/user-materials', userMaterialController.addFavoriteMaterial);
+router.delete('/user-materials/:userId/:materialId', userMaterialController.removeFavoriteMaterial);
 
 // ==========================================
 // SOLICITUDES (7 rutas)

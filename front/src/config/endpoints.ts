@@ -54,6 +54,17 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================
+  // FAVORITOS DE MATERIALES - /api/user-materials
+  // ============================================
+  USER_MATERIALS: {
+    CREATE: '/api/user-materials',                                                       // POST - Crear/reactivar favorito
+    GET_BY_USER: (userId: number) => `/api/user-materials/${userId}`,                    // GET - Favoritos por usuario
+    CHECK: (userId: number, materialId: number) => `/api/user-materials/check/${userId}/${materialId}`, // GET - Verificar favorito
+    DELETE: (userId: number, materialId: number) => `/api/user-materials/${userId}/${materialId}`,      // DELETE - Quitar favorito
+    MATCHING_REQUESTS_COUNT: (userId: number) => `/api/user-materials/${userId}/matching-requests-count`, // GET - Conteo solicitudes por favoritos
+  },
+
+  // ============================================
   // SOLICITUDES - /api/request
   // ============================================
   REQUESTS: {

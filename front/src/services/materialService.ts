@@ -22,9 +22,10 @@ const MATERIAL_API = apiUrl(config.api.endpoints.materials);
  */
 export const getAllMaterials = async (): Promise<Material[]> => {
   try {
-    console.log('📥 materialService.getAllMaterials - Llamando:', MATERIAL_API);
+    const url = `${MATERIAL_API}?state=1`;
+    console.log('materialService.getAllMaterials - Llamando:', url);
 
-    const response = await fetch(MATERIAL_API, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

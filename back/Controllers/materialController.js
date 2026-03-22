@@ -1,5 +1,6 @@
 // Controllers/materialController.js
 import * as MaterialModel from "../Models/Forms/materialModel.js";
+import * as UserMaterialModel from "../Models/userMaterialModel.js";
 import db from '../config/DBConnect.js'; // ← ESTA LÍNEA FALTABA
 
 /**
@@ -212,6 +213,10 @@ export const updateMaterial = async (req, res) => {
         state !== undefined ? parseInt(state) : null,
         null // modifiedBy
       );
+
+      if (state !== undefined && parseInt(state) === 0) {
+        await UserMaterialModel.deactivateFavoritesByMaterialId(conn, parseInt(id));
+      }
       
       if (!updated) {
         await conn.rollback();
@@ -282,6 +287,10 @@ export const deleteMaterial = async (req, res) => {
       await conn.beginTransaction();
       
       const deleted = await MaterialModel.softDelete(conn, parseInt(id));
+
+      if (deleted) {
+        await UserMaterialModel.deactivateFavoritesByMaterialId(conn, parseInt(id));
+      }
       
       if (!deleted) {
         await conn.rollback();
