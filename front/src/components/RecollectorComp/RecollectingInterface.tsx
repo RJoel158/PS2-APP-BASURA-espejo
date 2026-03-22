@@ -7,6 +7,7 @@ import RequestAndAppoint from "../RecyclerComp/request_&_appoint";
 import ChangePasswordModal from "../PasswordComp/ChangePasswordModal";
 import AnnouncementBanner from "../CommonComp/AnnouncementBanner";
 import Footer from "../HomeComps/Footer";
+import FavoriteRequestsSummaryCard from "./FavoriteRequestsSummaryCard";
 
 interface Recycler {
   id: number;
@@ -102,6 +103,7 @@ const RecollectingInterface: React.FC = () => {
         {/* Sidebar Izquierdo - Solicitudes y Citas */}
         <div className="left-sidebar">
           <RequestAndAppoint user={user} />
+          <FavoriteRequestsSummaryCard userId={user.id} />
         </div>
 
         {/* Contenido Central */}
