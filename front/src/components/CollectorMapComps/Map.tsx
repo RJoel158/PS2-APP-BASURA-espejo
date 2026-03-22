@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -107,6 +108,10 @@ interface MapViewState {
   bounds: L.LatLngBounds | null;
 }
 
+interface MapLocationState {
+  favoriteMaterialIds?: number[];
+}
+
 const DAY_TO_SCHEDULE_KEYS: Record<string, string[]> = {
   lun: ['lun', 'lunes', 'monday', 'Monday'],
   mar: ['mar', 'martes', 'tuesday', 'Tuesday'],
@@ -118,6 +123,8 @@ const DAY_TO_SCHEDULE_KEYS: Record<string, string[]> = {
 };
 
 const RecyclingPointsMap: React.FC = () => {
+  const location = useLocation();
+  const locationState = (location.state as MapLocationState | null) || null;
   const [recyclingRequests, setRecyclingRequests] = useState<RecyclingRequest[]>([]);
   const [markerClusters, setMarkerClusters] = useState<MarkerCluster[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +144,10 @@ const RecyclingPointsMap: React.FC = () => {
   // States para filtrado
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filters, setFilters] = useState({ materialId: '', day: '' });
-  const activeFilterCount = Number(Boolean(filters.materialId)) + Number(Boolean(filters.day));
+  const [favoriteMaterialFilterIds, setFavoriteMaterialFilterIds] = useState<number[]>([]);
+  const hasFavoriteFilter = favoriteMaterialFilterIds.length > 0;
+  const activeFilterCount =
+    Number(Boolean(filters.materialId) || hasFavoriteFilter) + Number(Boolean(filters.day));
   const hasActiveFilters = activeFilterCount > 0;
 
   const normalizeDayToken = (value: unknown): string => {
@@ -172,12 +182,16 @@ const RecyclingPointsMap: React.FC = () => {
   };
 
   const applyFilters = (requests: RecyclingRequest[]) => {
+    const favoriteFilterSet = new Set(favoriteMaterialFilterIds);
+
     return requests.filter(req => {
       let matchMaterial = true;
       let matchDay = true;
 
       if (filters.materialId) {
         matchMaterial = req.materialId.toString() === filters.materialId;
+      } else if (favoriteFilterSet.size > 0) {
+        matchMaterial = favoriteFilterSet.has(Number(req.materialId));
       }
 
       if (filters.day) {
@@ -579,6 +593,18 @@ const RecyclingPointsMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const incomingFavoriteIds = Array.isArray(locationState?.favoriteMaterialIds)
+      ? locationState.favoriteMaterialIds
+      : [];
+
+    const normalizedIds = incomingFavoriteIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    setFavoriteMaterialFilterIds(normalizedIds);
+  }, [locationState]);
+
+  useEffect(() => {
     if (recyclingRequests.length === 0) {
       setMarkerClusters([]);
       return;
@@ -598,7 +624,7 @@ const RecyclingPointsMap: React.FC = () => {
       zoom: mapView.zoom,
       hasBounds: Boolean(mapView.bounds)
     });
-  }, [filters, recyclingRequests, mapView]);
+  }, [filters, favoriteMaterialFilterIds, recyclingRequests, mapView]);
 
   useEffect(() => {
     if (!selectedRequestId || recyclingRequests.length === 0) {
@@ -614,7 +640,7 @@ const RecyclingPointsMap: React.FC = () => {
       setLoadingRequestDetail(false);
       setShowPickupModal(false);
     }
-  }, [filters, recyclingRequests, selectedRequestId]);
+  }, [filters, favoriteMaterialFilterIds, recyclingRequests, selectedRequestId]);
 
   useEffect(() => {
     if (!selectedRequestId) {
@@ -709,7 +735,10 @@ const RecyclingPointsMap: React.FC = () => {
 
   const selectedPhone = selectedRequest?.userPhone || 'No disponible';
 
-  const availableRequestsCount = useMemo(() => applyFilters(recyclingRequests).length, [recyclingRequests, filters]);
+  const availableRequestsCount = useMemo(
+    () => applyFilters(recyclingRequests).length,
+    [recyclingRequests, filters, favoriteMaterialFilterIds]
+  );
 
 
   if (loading) {
@@ -1020,7 +1049,11 @@ const RecyclingPointsMap: React.FC = () => {
                 <button
                   type="button"
                   className="filter-clear-btn"
-                  onClick={()=>{setFilters({materialId:"", day:""}); setShowFilterModal(false);}}
+                  onClick={()=>{
+                    setFilters({materialId:"", day:""});
+                    setFavoriteMaterialFilterIds([]);
+                    setShowFilterModal(false);
+                  }}
                 >
                   Limpiar
                 </button>

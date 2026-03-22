@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FavoriteMaterialsModal from './FavoriteMaterialsModal';
 import './FavoriteRequestsSummaryCard.css';
 import api from '../../services/api';
@@ -8,9 +9,18 @@ interface FavoriteRequestsSummaryCardProps {
   userId: number;
 }
 
+interface FavoriteMaterialRow {
+  userId: number;
+  materialId: number;
+  state: number;
+  name: string;
+  description: string;
+}
+
 const FavoriteRequestsSummaryCard: React.FC<FavoriteRequestsSummaryCardProps> = ({ userId }) => {
   const [isFavoritesModalOpen, setIsFavoritesModalOpen] = useState(false);
   const [matchingRequestsCount, setMatchingRequestsCount] = useState(0);
+  const navigate = useNavigate();
 
   const loadMatchingRequestsCount = useCallback(async () => {
     try {
@@ -28,6 +38,27 @@ const FavoriteRequestsSummaryCard: React.FC<FavoriteRequestsSummaryCardProps> = 
   useEffect(() => {
     void loadMatchingRequestsCount();
   }, [loadMatchingRequestsCount]);
+
+  const handleViewRequests = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: FavoriteMaterialRow[] }>(
+        API_ENDPOINTS.USER_MATERIALS.GET_BY_USER(userId)
+      );
+
+      const favoriteMaterialIds = (response.data?.data || [])
+        .map((item) => Number(item.materialId))
+        .filter((id) => Number.isInteger(id) && id > 0);
+
+      navigate('/recycling-points', {
+        state: {
+          favoriteMaterialIds
+        }
+      });
+    } catch (error) {
+      console.error('[FavoriteRequestsSummaryCard] Error al obtener favoritos para filtrar mapa:', error);
+      navigate('/recycling-points');
+    }
+  };
 
   return (
     <>
@@ -50,7 +81,7 @@ const FavoriteRequestsSummaryCard: React.FC<FavoriteRequestsSummaryCardProps> = 
         <button
           type="button"
           className="favorite-requests-btn favorite-requests-btn-view"
-          onClick={() => {}}
+          onClick={handleViewRequests}
         >
           Ver solicitudes
         </button>
