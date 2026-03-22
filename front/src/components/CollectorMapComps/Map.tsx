@@ -122,6 +122,16 @@ const DAY_TO_SCHEDULE_KEYS: Record<string, string[]> = {
   dom: ['dom', 'domingo', 'sunday', 'Sunday']
 };
 
+const DAY_FILTER_OPTIONS = [
+  { value: 'lun', label: 'Lunes' },
+  { value: 'mar', label: 'Martes' },
+  { value: 'mie', label: 'Miércoles' },
+  { value: 'jue', label: 'Jueves' },
+  { value: 'vie', label: 'Viernes' },
+  { value: 'sab', label: 'Sábado' },
+  { value: 'dom', label: 'Domingo' }
+] as const;
+
 const RecyclingPointsMap: React.FC = () => {
   const location = useLocation();
   const locationState = (location.state as MapLocationState | null) || null;
@@ -143,12 +153,39 @@ const RecyclingPointsMap: React.FC = () => {
 
   // States para filtrado
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [filters, setFilters] = useState({ materialId: '', day: '' });
+  const [filters, setFilters] = useState<{ materialIds: number[]; days: string[] }>({
+    materialIds: [],
+    days: []
+  });
   const [favoriteMaterialFilterIds, setFavoriteMaterialFilterIds] = useState<number[]>([]);
   const hasFavoriteFilter = favoriteMaterialFilterIds.length > 0;
   const activeFilterCount =
-    Number(Boolean(filters.materialId) || hasFavoriteFilter) + Number(Boolean(filters.day));
+    Number(filters.materialIds.length > 0 || hasFavoriteFilter) + Number(filters.days.length > 0);
   const hasActiveFilters = activeFilterCount > 0;
+
+  const toggleMaterialFilter = (materialId: number) => {
+    setFilters((prev) => {
+      const exists = prev.materialIds.includes(materialId);
+      return {
+        ...prev,
+        materialIds: exists
+          ? prev.materialIds.filter((id) => id !== materialId)
+          : [...prev.materialIds, materialId]
+      };
+    });
+  };
+
+  const toggleDayFilter = (dayValue: string) => {
+    setFilters((prev) => {
+      const exists = prev.days.includes(dayValue);
+      return {
+        ...prev,
+        days: exists
+          ? prev.days.filter((day) => day !== dayValue)
+          : [...prev.days, dayValue]
+      };
+    });
+  };
 
   const normalizeDayToken = (value: unknown): string => {
     if (typeof value !== 'string') {
@@ -183,20 +220,23 @@ const RecyclingPointsMap: React.FC = () => {
 
   const applyFilters = (requests: RecyclingRequest[]) => {
     const favoriteFilterSet = new Set(favoriteMaterialFilterIds);
+    const manualMaterialFilterSet = new Set(filters.materialIds);
 
     return requests.filter(req => {
       let matchMaterial = true;
       let matchDay = true;
 
-      if (filters.materialId) {
-        matchMaterial = req.materialId.toString() === filters.materialId;
+      if (manualMaterialFilterSet.size > 0) {
+        matchMaterial = manualMaterialFilterSet.has(Number(req.materialId));
       } else if (favoriteFilterSet.size > 0) {
         matchMaterial = favoriteFilterSet.has(Number(req.materialId));
       }
 
-      if (filters.day) {
-        const selectedDay = normalizeDayToken(filters.day);
-        matchDay = hasDayInArray(req.days, selectedDay) || isScheduleDayEnabled(req.schedule, selectedDay);
+      if (filters.days.length > 0) {
+        matchDay = filters.days.some((selectedDayValue) => {
+          const selectedDay = normalizeDayToken(selectedDayValue);
+          return hasDayInArray(req.days, selectedDay) || isScheduleDayEnabled(req.schedule, selectedDay);
+        });
       }
 
       return matchMaterial && matchDay;
@@ -597,11 +637,18 @@ const RecyclingPointsMap: React.FC = () => {
       ? locationState.favoriteMaterialIds
       : [];
 
-    const normalizedIds = incomingFavoriteIds
+    const normalizedIds = Array.from(new Set(incomingFavoriteIds
       .map((id) => Number(id))
-      .filter((id) => Number.isInteger(id) && id > 0);
+      .filter((id) => Number.isInteger(id) && id > 0)));
 
     setFavoriteMaterialFilterIds(normalizedIds);
+
+    if (normalizedIds.length > 0) {
+      setFilters((prev) => ({
+        ...prev,
+        materialIds: normalizedIds
+      }));
+    }
   }, [locationState]);
 
   useEffect(() => {
@@ -1014,35 +1061,43 @@ const RecyclingPointsMap: React.FC = () => {
               </div>
 
               <div className="filter-group">
-                <label htmlFor="filter-material">Material:</label>
-                <select
-                  id="filter-material"
-                  className="filter-select"
-                  value={filters.materialId}
-                  onChange={(e)=>setFilters({...filters, materialId: e.target.value})}
-                >
-                  <option value="">Todos los materiales</option>
-                  {materials.map(m => (<option key={m.id} value={m.id}>{m.name}</option>))}
-                </select>
+                <label>Materiales:</label>
+                <div className="filter-chip-grid">
+                  {materials.map((material) => {
+                    const isFavoritePreselected =
+                      filters.materialIds.length === 0 && favoriteMaterialFilterIds.includes(material.id);
+                    const isSelected = filters.materialIds.includes(material.id) || isFavoritePreselected;
+                    return (
+                      <button
+                        key={material.id}
+                        type="button"
+                        className={`filter-chip ${isSelected ? 'active' : ''}`}
+                        onClick={() => toggleMaterialFilter(material.id)}
+                      >
+                        {material.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="filter-group">
-                <label htmlFor="filter-day">Día disponible:</label>
-                <select
-                  id="filter-day"
-                  className="filter-select"
-                  value={filters.day}
-                  onChange={(e)=>setFilters({...filters, day: e.target.value})}
-                >
-                  <option value="">Cualquier día</option>
-                  <option value="lun">Lunes</option>
-                  <option value="mar">Martes</option>
-                  <option value="mie">Miércoles</option>
-                  <option value="jue">Jueves</option>
-                  <option value="vie">Viernes</option>
-                  <option value="sab">Sábado</option>
-                  <option value="dom">Domingo</option>
-                </select>
+                <label>Días disponibles:</label>
+                <div className="filter-chip-grid days">
+                  {DAY_FILTER_OPTIONS.map((dayOption) => {
+                    const isSelected = filters.days.includes(dayOption.value);
+                    return (
+                      <button
+                        key={dayOption.value}
+                        type="button"
+                        className={`filter-chip day ${isSelected ? 'active' : ''}`}
+                        onClick={() => toggleDayFilter(dayOption.value)}
+                      >
+                        {dayOption.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="filter-actions">
@@ -1050,7 +1105,7 @@ const RecyclingPointsMap: React.FC = () => {
                   type="button"
                   className="filter-clear-btn"
                   onClick={()=>{
-                    setFilters({materialId:"", day:""});
+                    setFilters({ materialIds: [], days: [] });
                     setFavoriteMaterialFilterIds([]);
                     setShowFilterModal(false);
                   }}
