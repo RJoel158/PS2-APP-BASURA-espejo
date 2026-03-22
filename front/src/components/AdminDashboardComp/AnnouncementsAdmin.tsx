@@ -15,6 +15,8 @@ import { config } from '../../config/environment';
 interface Announcement {
   id: number;
   title: string;
+  description: string | null;
+  url: string | null;
   imagePath: string;
   targetRole: 'recolector' | 'reciclador' | 'both';
   state: number;
@@ -24,6 +26,8 @@ interface Announcement {
 
 interface FormData {
   title: string;
+  description: string;
+  url: string;
   imagePath: string;
   targetRole: 'recolector' | 'reciclador' | 'both';
   state: number;
@@ -55,6 +59,8 @@ const AnnouncementsAdmin: React.FC = () => {
   // Estados del formulario
   const [formData, setFormData] = useState<FormData>({
     title: '',
+    description: '',
+    url: '',
     imagePath: '',
     targetRole: 'both',
     state: 1,
@@ -64,6 +70,8 @@ const AnnouncementsAdmin: React.FC = () => {
   // Estados del modal de creación
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
+    description: '',
+    url: '',
     imagePath: '',
     targetRole: 'both' as 'recolector' | 'reciclador' | 'both',
   });
@@ -101,7 +109,8 @@ const AnnouncementsAdmin: React.FC = () => {
     // Filtrar por búsqueda
     if (search.trim()) {
       filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(search.toLowerCase())
+        item.title.toLowerCase().includes(search.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(search.toLowerCase())
       );
     }
 
@@ -130,6 +139,8 @@ const AnnouncementsAdmin: React.FC = () => {
       setSelectedAnnouncement(fullData);
       setFormData({
         title: fullData.title,
+        description: fullData.description || '',
+        url: fullData.url || '',
         imagePath: fullData.imagePath,
         targetRole: fullData.targetRole,
         state: fullData.state,
@@ -149,7 +160,7 @@ const AnnouncementsAdmin: React.FC = () => {
     }
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -228,6 +239,8 @@ const AnnouncementsAdmin: React.FC = () => {
       await updateAnnouncement(
         selectedAnnouncement.id,
         formData.title,
+        formData.description,
+        formData.url,
         formData.imagePath,
         formData.targetRole,
         formData.state
@@ -236,7 +249,15 @@ const AnnouncementsAdmin: React.FC = () => {
       // Actualizar inmediatamente la lista local
       const updatedAnnouncements = announcements.map(a =>
         a.id === selectedAnnouncement.id
-          ? { ...a, title: formData.title, imagePath: formData.imagePath, targetRole: formData.targetRole, state: formData.state }
+          ? {
+              ...a,
+              title: formData.title,
+              description: formData.description,
+              url: formData.url,
+              imagePath: formData.imagePath,
+              targetRole: formData.targetRole,
+              state: formData.state
+            }
           : a
       );
       setAnnouncements(updatedAnnouncements);
@@ -283,6 +304,8 @@ const AnnouncementsAdmin: React.FC = () => {
       await updateAnnouncement(
         selectedAnnouncement.id,
         selectedAnnouncement.title,
+        selectedAnnouncement.description || '',
+        selectedAnnouncement.url || '',
         selectedAnnouncement.imagePath,
         selectedAnnouncement.targetRole,
         0  // state = 0 (inactivo)
@@ -345,6 +368,8 @@ const AnnouncementsAdmin: React.FC = () => {
 
       console.log('📤 Creando anuncio:', {
         title: newAnnouncement.title,
+        description: newAnnouncement.description,
+        url: newAnnouncement.url,
         imagePath: newAnnouncement.imagePath,
         targetRole: newAnnouncement.targetRole,
         createdBy: user.id
@@ -352,6 +377,8 @@ const AnnouncementsAdmin: React.FC = () => {
 
       await createAnnouncement(
         newAnnouncement.title.trim(),
+        newAnnouncement.description.trim(),
+        newAnnouncement.url.trim(),
         newAnnouncement.imagePath,
         newAnnouncement.targetRole,
         user.id
@@ -361,7 +388,7 @@ const AnnouncementsAdmin: React.FC = () => {
 
       // Limpiar todo
       setShowModal(false);
-      setNewAnnouncement({ title: '', imagePath: '', targetRole: 'both' });
+      setNewAnnouncement({ title: '', description: '', url: '', imagePath: '', targetRole: 'both' });
       setPreviewImage(null);
       setError(null);
 
@@ -388,6 +415,8 @@ const AnnouncementsAdmin: React.FC = () => {
     setSelectedAnnouncement(null);
     setFormData({
       title: '',
+      description: '',
+      url: '',
       imagePath: '',
       targetRole: 'both',
       state: 1,
@@ -397,14 +426,14 @@ const AnnouncementsAdmin: React.FC = () => {
   };
 
   const handleOpenModal = () => {
-    setNewAnnouncement({ title: '', imagePath: '', targetRole: 'both' });
+    setNewAnnouncement({ title: '', description: '', url: '', imagePath: '', targetRole: 'both' });
     setPreviewImage(null);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setNewAnnouncement({ title: '', imagePath: '', targetRole: 'both' });
+    setNewAnnouncement({ title: '', description: '', url: '', imagePath: '', targetRole: 'both' });
     setPreviewImage(null);
   };
 
@@ -731,6 +760,74 @@ const AnnouncementsAdmin: React.FC = () => {
                   />
                 </div>
 
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Descripción
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleFormChange}
+                    disabled={!selectedAnnouncement}
+                    placeholder="Descripción del anuncio"
+                    maxLength={255}
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '0.625rem 0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      backgroundColor: selectedAnnouncement ? '#ffffff' : '#f3f4f6',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      boxSizing: 'border-box',
+                      cursor: selectedAnnouncement ? 'text' : 'not-allowed',
+                      transition: 'all 0.2s ease',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    URL
+                  </label>
+                  <input
+                    type="text"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleFormChange}
+                    disabled={!selectedAnnouncement}
+                    placeholder="https://ejemplo.com"
+                    style={{
+                      width: '100%',
+                      padding: '0.625rem 0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      backgroundColor: selectedAnnouncement ? '#ffffff' : '#f3f4f6',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      boxSizing: 'border-box',
+                      cursor: selectedAnnouncement ? 'text' : 'not-allowed',
+                      transition: 'all 0.2s ease'
+                    }}
+                  />
+                </div>
+
                 {/* Imagen */}
                 <div>
                   <label style={{
@@ -1036,6 +1133,72 @@ const AnnouncementsAdmin: React.FC = () => {
                   onFocus={(e) => e.currentTarget.style.borderColor = '#149D52'}
                   onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                   required
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Descripción
+                </label>
+                <textarea
+                  value={newAnnouncement.description}
+                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe el anuncio"
+                  maxLength={255}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    backgroundColor: '#fafafa',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    resize: 'vertical'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#149D52'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  URL
+                </label>
+                <input
+                  type="text"
+                  value={newAnnouncement.url}
+                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://ejemplo.com"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    backgroundColor: '#fafafa',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
+                    fontFamily: 'system-ui, -apple-system, sans-serif'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#149D52'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                 />
               </div>
 

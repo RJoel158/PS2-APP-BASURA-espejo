@@ -162,6 +162,30 @@ export class Validator {
   }
 
   /**
+   * Valida URL (acepta solo http/https)
+   * @param {string} url - URL a validar
+   * @param {boolean} required - Si la URL es obligatoria
+   * @returns {string} - Mensaje de error o string vacío
+   */
+  static validateUrl(url, required = false) {
+    const normalized = this.normalizeSpaces(url || '');
+
+    if (!normalized) {
+      return required ? 'La URL es requerida' : '';
+    }
+
+    try {
+      const parsed = new URL(normalized);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return 'La URL debe iniciar con http:// o https://';
+      }
+      return '';
+    } catch {
+      return 'Formato de URL inválido';
+    }
+  }
+
+  /**
    * Utilidad para saber si el objeto de errores está vacío
    * @param {Object} errors - Objeto de errores
    * @returns {boolean} - true si no hay errores, false si hay

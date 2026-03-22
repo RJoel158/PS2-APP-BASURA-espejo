@@ -1,6 +1,9 @@
 // Controllers/announcementController.js
 import * as AnnouncementModel from "../Models/announcementModel.js";
 import db from '../config/DBConnect.js';
+import { Validator } from '../shared/Validator.js';
+
+const MAX_ANNOUNCEMENT_DESCRIPTION_LENGTH = 255;
 
 /**
  * Obtener todos los anuncios (con opción de filtrar por estado)
@@ -97,12 +100,15 @@ export const getAnnouncementById = async (req, res) => {
  */
 export const createAnnouncement = async (req, res) => {
   try {
-    const { title, imagePath, targetRole, createdBy } = req.body;
+    const { title, description, url, imagePath, targetRole, createdBy } = req.body;
+    const normalizedTitle = Validator.normalizeSpaces(title || '');
+    const normalizedDescription = Validator.normalizeDescription(description || '');
+    const normalizedUrl = Validator.normalizeSpaces(url || '');
     
-    console.log("[INFO] createAnnouncement controller called:", { title, imagePath, targetRole, createdBy });
+    console.log("[INFO] createAnnouncement controller called:", { title: normalizedTitle, description: normalizedDescription, url: normalizedUrl, imagePath, targetRole, createdBy });
     
     // Validaciones básicas
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    if (!normalizedTitle) {
       return res.status(400).json({
         success: false,
         error: "El título del anuncio es requerido"
@@ -113,6 +119,29 @@ export const createAnnouncement = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "La ruta de la imagen es requerida"
+      });
+    }
+
+    if (normalizedDescription) {
+      const descriptionError = Validator.validateDescription(
+        normalizedDescription,
+        MAX_ANNOUNCEMENT_DESCRIPTION_LENGTH,
+        1
+      );
+
+      if (descriptionError) {
+        return res.status(400).json({
+          success: false,
+          error: descriptionError
+        });
+      }
+    }
+
+    const urlError = Validator.validateUrl(normalizedUrl, false);
+    if (urlError) {
+      return res.status(400).json({
+        success: false,
+        error: urlError
       });
     }
     
@@ -136,7 +165,9 @@ export const createAnnouncement = async (req, res) => {
       
       const announcementId = await AnnouncementModel.create(
         conn,
-        title.trim(),
+        normalizedTitle,
+        normalizedDescription,
+        normalizedUrl,
         imagePath.trim(),
         targetRole,
         parseInt(createdBy)
@@ -193,9 +224,12 @@ export const createAnnouncement = async (req, res) => {
 export const updateAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, imagePath, targetRole, state } = req.body;
+    const { title, description, url, imagePath, targetRole, state } = req.body;
+    const normalizedTitle = Validator.normalizeSpaces(title || '');
+    const normalizedDescription = Validator.normalizeDescription(description || '');
+    const normalizedUrl = Validator.normalizeSpaces(url || '');
     
-    console.log("[INFO] updateAnnouncement controller called:", { id, title, targetRole, state });
+    console.log("[INFO] updateAnnouncement controller called:", { id, title: normalizedTitle, description: normalizedDescription, url: normalizedUrl, targetRole, state });
     
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({
@@ -204,7 +238,7 @@ export const updateAnnouncement = async (req, res) => {
       });
     }
     
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    if (!normalizedTitle) {
       return res.status(400).json({
         success: false,
         error: "El título del anuncio es requerido"
@@ -215,6 +249,29 @@ export const updateAnnouncement = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "La ruta de la imagen es requerida"
+      });
+    }
+
+    if (normalizedDescription) {
+      const descriptionError = Validator.validateDescription(
+        normalizedDescription,
+        MAX_ANNOUNCEMENT_DESCRIPTION_LENGTH,
+        1
+      );
+
+      if (descriptionError) {
+        return res.status(400).json({
+          success: false,
+          error: descriptionError
+        });
+      }
+    }
+
+    const urlError = Validator.validateUrl(normalizedUrl, false);
+    if (urlError) {
+      return res.status(400).json({
+        success: false,
+        error: urlError
       });
     }
     
@@ -239,7 +296,9 @@ export const updateAnnouncement = async (req, res) => {
       const updated = await AnnouncementModel.update(
         conn,
         parseInt(id),
-        title.trim(),
+        normalizedTitle,
+        normalizedDescription,
+        normalizedUrl,
         imagePath.trim(),
         targetRole,
         parseInt(state)

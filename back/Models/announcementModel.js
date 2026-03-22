@@ -12,6 +12,8 @@ export const getAll = async (state = null) => {
     let query = `SELECT 
       a.id, 
       a.title, 
+      a.description,
+      a.url,
       a.imagePath, 
       a.targetRole, 
       a.state,
@@ -54,6 +56,8 @@ export const getById = async (id) => {
       `SELECT 
         a.id, 
         a.title, 
+        a.description,
+        a.url,
         a.imagePath, 
         a.targetRole, 
         a.state,
@@ -84,9 +88,9 @@ export const getById = async (id) => {
 /**
  * Crear anuncio
  */
-export const create = async (conn, title, imagePath, targetRole, createdBy) => {
+export const create = async (conn, title, description, url, imagePath, targetRole, createdBy) => {
   try {
-    console.log("[INFO] AnnouncementModel.create:", { title, imagePath, targetRole, createdBy });
+    console.log("[INFO] AnnouncementModel.create:", { title, description, url, imagePath, targetRole, createdBy });
     
     // Validar que createdBy existe
     const [userCheck] = await conn.query(
@@ -99,9 +103,9 @@ export const create = async (conn, title, imagePath, targetRole, createdBy) => {
     }
     
     const [res] = await conn.query(
-      `INSERT INTO announcement (title, imagePath, targetRole, state, createdBy, createdDate)
-       VALUES (?, ?, ?, 1, ?, NOW())`,
-      [title, imagePath, targetRole, createdBy]
+      `INSERT INTO announcement (title, description, url, imagePath, targetRole, state, createdBy, createdDate)
+       VALUES (?, ?, ?, ?, ?, 1, ?, NOW())`,
+      [title, description, url, imagePath, targetRole, createdBy]
     );
     
     console.log("[INFO] AnnouncementModel.create - announcement created:", res.insertId);
@@ -109,6 +113,8 @@ export const create = async (conn, title, imagePath, targetRole, createdBy) => {
   } catch (err) {
     console.error("[ERROR] AnnouncementModel.create:", {
       title,
+      description,
+      url,
       imagePath,
       targetRole,
       createdBy,
@@ -125,15 +131,15 @@ export const create = async (conn, title, imagePath, targetRole, createdBy) => {
 /**
  * Actualizar anuncio
  */
-export const update = async (conn, id, title, imagePath, targetRole, state) => {
+export const update = async (conn, id, title, description, url, imagePath, targetRole, state) => {
   try {
-    console.log("[INFO] AnnouncementModel.update:", { id, title, targetRole, state });
+    console.log("[INFO] AnnouncementModel.update:", { id, title, description, url, targetRole, state });
     
     const [res] = await conn.query(
       `UPDATE announcement 
-       SET title = ?, imagePath = ?, targetRole = ?, state = ?
+       SET title = ?, description = ?, url = ?, imagePath = ?, targetRole = ?, state = ?
        WHERE id = ?`,
-      [title, imagePath, targetRole, state, id]
+      [title, description, url, imagePath, targetRole, state, id]
     );
     
     if (res.affectedRows === 0) {
@@ -193,6 +199,8 @@ export const getByRole = async (targetRole) => {
       `SELECT 
         a.id, 
         a.title, 
+        a.description,
+        a.url,
         a.imagePath, 
         a.targetRole, 
         a.state,

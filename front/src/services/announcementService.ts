@@ -30,12 +30,14 @@ export const getAnnouncementById = async (id: number) => {
 };
 
 // Crear anuncio
-export const createAnnouncement = async (title: string, imagePath: string, targetRole: string, createdBy: number) => {
+export const createAnnouncement = async (title: string, description: string, url: string, imagePath: string, targetRole: string, createdBy: number) => {
   try {
-    console.log('[announcementService] Creando anuncio:', { title, imagePath, targetRole, createdBy });
+    console.log('[announcementService] Creando anuncio:', { title, description, url, imagePath, targetRole, createdBy });
     
     const response = await api.post(API_ENDPOINTS.ANNOUNCEMENTS.CREATE, {
       title,
+      description,
+      url,
       imagePath,
       targetRole,
       createdBy
@@ -50,12 +52,14 @@ export const createAnnouncement = async (title: string, imagePath: string, targe
 };
 
 // Actualizar anuncio
-export const updateAnnouncement = async (id: number, title: string, imagePath: string, targetRole: string, state: number) => {
+export const updateAnnouncement = async (id: number, title: string, description: string, url: string, imagePath: string, targetRole: string, state: number) => {
   try {
-    console.log('[announcementService] Actualizando anuncio:', { id, title, imagePath, targetRole, state });
+    console.log('[announcementService] Actualizando anuncio:', { id, title, description, url, imagePath, targetRole, state });
     
     const response = await api.put(API_ENDPOINTS.ANNOUNCEMENTS.UPDATE(id), {
       title,
+      description,
+      url,
       imagePath,
       targetRole,
       state

@@ -5,6 +5,8 @@ import { config } from '../../config/environment';
 interface Announcement {
   id: number;
   title: string;
+  description: string | null;
+  url: string | null;
   imagePath: string;
   targetRole: 'recolector' | 'reciclador' | 'both';
   state: number;
@@ -104,9 +106,18 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({ role, position 
           <div className="announcement-content-section">
             <h3 className="announcement-title">{announcement.title}</h3>
             <p className="announcement-description">
-              2 cajas medianas de cartón en buen estado para reciclar
+              {announcement.description || 'Sin descripción'}
             </p>
-            <button className="announcement-explore-btn">
+            <button
+              className="announcement-explore-btn"
+              type="button"
+              onClick={() => {
+                if (announcement.url) {
+                  window.open(announcement.url, '_blank', 'noopener,noreferrer');
+                }
+              }}
+              disabled={!announcement.url}
+            >
               Explorar →
             </button>
 

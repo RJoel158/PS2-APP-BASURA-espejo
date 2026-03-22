@@ -48,6 +48,8 @@ CREATE TABLE `advertisement` (
 CREATE TABLE `announcement` (
   `id` int(10) UNSIGNED NOT NULL,
   `title` varchar(150) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `url` text DEFAULT NULL,
   `imagePath` varchar(255) NOT NULL,
   `targetRole` enum('recolector','reciclador','both') NOT NULL DEFAULT 'both',
   `state` tinyint(4) NOT NULL DEFAULT 1,
