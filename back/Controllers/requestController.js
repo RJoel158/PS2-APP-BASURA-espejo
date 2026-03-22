@@ -2,6 +2,7 @@
 import * as RequestModel from "../Models/Forms/requestModel.js";
 import * as ImageModel from "../Models/Forms/imageModel.js";
 import * as ScheduleModel from "../Models/Forms/scheduleModel.js";
+import * as RequestReportModel from '../Models/requestReportModel.js';
 import { REQUEST_STATE } from "../shared/constants.js";
 import db from '../config/DBConnect.js';
 import multer from 'multer';
@@ -538,6 +539,7 @@ export const updateRequestState = async (req, res) => {
   try {
     const { id } = req.params;
     const { state } = req.body;
+    const numericState = Number(state);
     
     console.log("[INFO] updateRequestState controller called:", { id, state });
     
@@ -559,13 +561,25 @@ export const updateRequestState = async (req, res) => {
     try {
       await conn.beginTransaction();
       
-      const updated = await RequestModel.updateState(conn, parseInt(id), state);
+      const requestId = parseInt(id);
+      const updated = await RequestModel.updateState(conn, requestId, numericState);
       
       if (!updated) {
         await conn.rollback();
         return res.status(404).json({
           success: false,
           error: "Solicitud no encontrada"
+        });
+      }
+
+      if (numericState === REQUEST_STATE.REPORTED) {
+        const updatedReports = await RequestReportModel.updateReportsStateByRequestId(
+          requestId,
+          0
+        );
+        console.log('[INFO] updateRequestState - Reportes verificados por solicitud reportada:', {
+          requestId,
+          updatedReports
         });
       }
       

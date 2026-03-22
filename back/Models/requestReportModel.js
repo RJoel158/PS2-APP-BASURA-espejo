@@ -232,3 +232,26 @@ export const updateReportState = async (reportId, state) => {
 		throw err;
 	}
 };
+
+/**
+ * Actualizar estado de todos los reportes activos de una solicitud
+ * @param {number} requestId - ID de la solicitud
+ * @param {number} state - Nuevo estado para los reportes
+ * @returns {Promise<number>} Cantidad de reportes actualizados
+ */
+export const updateReportsStateByRequestId = async (requestId, state) => {
+	try {
+		const query = `
+			UPDATE report_info
+			SET state = ?
+			WHERE requestId = ?
+				AND state = 1
+		`;
+
+		const [result] = await db.query(query, [state, requestId]);
+		return result.affectedRows || 0;
+	} catch (err) {
+		console.error('[ERROR] ReportModel.updateReportsStateByRequestId:', err);
+		throw err;
+	}
+};
