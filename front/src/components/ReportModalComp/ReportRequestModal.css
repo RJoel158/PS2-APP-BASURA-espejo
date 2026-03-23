@@ -5,8 +5,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1060;
+  z-index: 1600;
   font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+}
+
+.report-toast-container.swal2-container {
+  z-index: 2100 !important;
 }
 
 .report-modal-box {
@@ -19,6 +23,7 @@
   max-height: 92vh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .report-modal-header {
@@ -87,6 +92,28 @@
   font-weight: 500;
 }
 
+.report-success-text {
+  margin-top: 10px;
+  color: #0f7f43;
+  background: #e9f8ef;
+  border: 1px solid rgba(15, 127, 67, 0.28);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.report-info-text {
+  margin-top: 10px;
+  color: #1d4f91;
+  background: #eaf3ff;
+  border: 1px solid rgba(29, 79, 145, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .report-modal-actions {
   padding: 0 16px 16px;
   display: flex;
@@ -115,6 +142,39 @@
 
 .report-submit-btn:hover {
   background-color: #108643;
+}
+
+.report-snackbar {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(92%, 380px);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  z-index: 1;
+}
+
+.report-snackbar--success {
+  background: #e9f8ef;
+  color: #0f7f43;
+  border: 1px solid rgba(15, 127, 67, 0.32);
+}
+
+.report-snackbar--info {
+  background: #eaf3ff;
+  color: #1d4f91;
+  border: 1px solid rgba(29, 79, 145, 0.32);
+}
+
+.report-snackbar--error {
+  background: #fff1f0;
+  color: #b42318;
+  border: 1px solid rgba(180, 35, 24, 0.28);
 }
 
 @media (max-width: 576px) {

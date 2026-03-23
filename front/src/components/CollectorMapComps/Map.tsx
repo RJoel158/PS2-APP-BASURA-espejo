@@ -7,6 +7,7 @@ import './Map.css';
 import SchedulePickupModal from '../SchedulePickupComp/SchedulePickupModal';
 import ImageCarousel from '../SchedulePickupComp/ImageCarousel';
 import ReportRequestModal from '../ReportModalComp/ReportRequestModal';
+import { API_ENDPOINTS } from '../../config/endpoints';
 import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
@@ -151,6 +152,8 @@ const RecyclingPointsMap: React.FC = () => {
   //Para controlar el modal de Schedule Pickup
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [alreadyReportedCurrentRequest, setAlreadyReportedCurrentRequest] = useState(false);
+  const [checkingReportStatus, setCheckingReportStatus] = useState(false);
 
   // States para filtrado
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -634,6 +637,63 @@ const RecyclingPointsMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!selectedRequest?.id) {
+      setAlreadyReportedCurrentRequest(false);
+      setCheckingReportStatus(false);
+      return;
+    }
+
+    const userString = localStorage.getItem('user');
+    if (!userString) {
+      setAlreadyReportedCurrentRequest(false);
+      setCheckingReportStatus(false);
+      return;
+    }
+
+    const currentUser = JSON.parse(userString);
+    const prosecutorId = Number(currentUser?.id);
+    if (!Number.isInteger(prosecutorId) || prosecutorId <= 0) {
+      setAlreadyReportedCurrentRequest(false);
+      setCheckingReportStatus(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const verifyAlreadyReported = async () => {
+      setCheckingReportStatus(true);
+      try {
+        const response = await fetch(apiUrl(API_ENDPOINTS.REQUEST_REPORTS.CHECK(selectedRequest.id, prosecutorId)));
+        if (!response.ok) {
+          throw new Error('No se pudo verificar estado de reporte');
+        }
+
+        const result = await response.json();
+        if (!isMounted) {
+          return;
+        }
+
+        setAlreadyReportedCurrentRequest(Boolean(result?.data?.hasReported));
+      } catch (checkError) {
+        if (isMounted) {
+          debugLog('[WARN] Error verificando reporte existente en mapa', checkError);
+          setAlreadyReportedCurrentRequest(false);
+        }
+      } finally {
+        if (isMounted) {
+          setCheckingReportStatus(false);
+        }
+      }
+    };
+
+    verifyAlreadyReported();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRequest?.id]);
+
+  useEffect(() => {
     const incomingFavoriteIds = Array.isArray(locationState?.favoriteMaterialIds)
       ? locationState.favoriteMaterialIds
       : [];
@@ -922,14 +982,18 @@ const RecyclingPointsMap: React.FC = () => {
                   <button
                     type="button"
                     className="header-report-btn"
-                    onClick={() => setShowReportModal(true)}
+                    onClick={() => {
+                      if (!alreadyReportedCurrentRequest && !checkingReportStatus) {
+                        setShowReportModal(true);
+                      }
+                    }}
                     title="Reportar solicitud"
-                    disabled={!selectedRequest || loadingRequestDetail}
+                    disabled={!selectedRequest || loadingRequestDetail || checkingReportStatus || alreadyReportedCurrentRequest}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M12 2L1 21h22L12 2zm0 5.5a1 1 0 011 1v6a1 1 0 11-2 0v-6a1 1 0 011-1zm0 11a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" />
                     </svg>
-                    Reportar
+                    {checkingReportStatus ? 'Verificando...' : alreadyReportedCurrentRequest ? 'Ya reportado' : 'Reportar'}
                   </button>
                 </div>
                 <button
@@ -1049,6 +1113,7 @@ const RecyclingPointsMap: React.FC = () => {
             </button>
           </div>
         )}
+
       </div>
 
         {showReportModal && selectedRequest && (
@@ -1058,6 +1123,7 @@ const RecyclingPointsMap: React.FC = () => {
             onClose={() => setShowReportModal(false)}
             onSubmit={() => {
               setShowReportModal(false);
+              setAlreadyReportedCurrentRequest(true);
             }}
           />
         )}
