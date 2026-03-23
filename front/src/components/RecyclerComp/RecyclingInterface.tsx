@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./RecyclingInterface.css";
 import Header from "./headerRecycler";
 import { getActiveOrLastPeriod, getLiveRanking, getHistoricalRanking } from "../../services/rankingService";
@@ -35,7 +35,24 @@ const RecyclingInterface: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [recyclers, setRecyclers] = useState<Recycler[]>([]);
   const [periodState, setPeriodState] = useState<'activo' | 'cerrado' | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [showTopRecyclers, setShowTopRecyclers] = useState<boolean>(true);
+  const [showHowTo, setShowHowTo] = useState<boolean>(true);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const updateViewportState = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setShowTopRecyclers(!mobile);
+      setShowHowTo(!mobile);
+    };
+
+    updateViewportState();
+    window.addEventListener('resize', updateViewportState);
+    return () => window.removeEventListener('resize', updateViewportState);
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -86,7 +103,7 @@ const RecyclingInterface: React.FC = () => {
   };
 
   return (
-    <div className="recycling-container">
+    <div className={`recycling-container recycler-role-view ${isMobile ? 'is-mobile-view' : ''}`}>
       {/* Header */}
       <Header user={user} />
 
@@ -100,71 +117,156 @@ const RecyclingInterface: React.FC = () => {
 
       <div className="main-content-new">
         {/* Sidebar Izquierdo - Solicitudes y Citas */}
-        <div className="left-sidebar">
+        <div className="left-sidebar ui-animate ui-animate-left">
           <RequestAndAppoint user={user} />
         </div>
 
         {/* Contenido Central */}
-        <div className="center-content">
+        <div className="center-content ui-animate ui-animate-up">
           {/* Botón RECICLA */}
-          <button className="recycle-banner" onClick={handleRecycleClick}>
-            ♻️ R E C I C L A ♻️
+          <button className="recycle-banner ui-animate-pop" onClick={handleRecycleClick}>
+            <i className="bi bi-recycle me-2" aria-hidden="true"></i>
+            R E C I C L A
           </button>
 
           {/* Top Recicladores */}
-          <div className="top-recyclers-card">
-            <h3 className="card-title">Top Recicladores</h3>
-            <p className="card-subtitle">
-              {periodState === 'activo' ? 'Índice de reciclaje este mes' : 'Último ranking de periodo cerrado'}
-            </p>
+          <section className={`mobile-collapsible ${showTopRecyclers ? 'expanded' : ''}`}>
+            <button
+              type="button"
+              className="mobile-collapsible-toggle"
+              onClick={() => setShowTopRecyclers((prev) => !prev)}
+              aria-expanded={showTopRecyclers}
+            >
+              <span>Top Recicladores</span>
+              <span className="mobile-collapsible-arrow">⌄</span>
+            </button>
 
-            <div className="recyclers-list-new">
-              {recyclers
-                .filter(r => r.rol === 'reciclador')
-                .slice(0, 4)
-                .map((recycler, idx) => (
-                  <div key={recycler.user_id || recycler.id || idx} className="recycler-item-new">
-                    <div className={`recycler-avatar-new recycler-avatar-color-${idx % 5}`}>
-                      {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <span className="recycler-name-new">{recycler.name || recycler.email || 'Reciclador'}</span>
-                    <span className="recycler-points-new">{recycler.puntaje_final || recycler.points || 0}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
+            <div className="mobile-collapsible-body">
+              <div className="top-recyclers-card">
+                <h3 className="card-title">Top Recicladores</h3>
+                <p className="card-subtitle">
+                  {periodState === 'activo' ? 'Índice de reciclaje este mes' : 'Último ranking de periodo cerrado'}
+                </p>
 
-          {/* Cómo puedo reciclar */}
-          <div className="how-to-recycle">
-            <h2>¿Cómo puedo reciclar?</h2>
-            <div className="steps-container">
-              <div className="step-card">
-                <div className="step-number">1</div>
-                <h3>Rellena el formulario</h3>
-                <p>Apreta el botón recicla y rellena el formulario.</p>
-              </div>
-              <div className="step-card">
-                <div className="step-number">2</div>
-                <h3>Espera</h3>
-                <p>Espera a que soliciten recoger tu material.</p>
-              </div>
-              <div className="step-card">
-                <div className="step-number">3</div>
-                <h3>Coordina</h3>
-                <p>Si tienes una solicitud puedes aceptarla o rechazarla, habla con el recolector ante cualquier duda.</p>
+                <div className="recyclers-list-new">
+                  {recyclers
+                    .filter(r => r.rol === 'reciclador')
+                    .slice(0, 4)
+                    .map((recycler, idx) => (
+                      <div key={recycler.user_id || recycler.id || idx} className="recycler-item-new">
+                        <div className={`recycler-avatar-new recycler-avatar-color-${idx % 5}`}>
+                          {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span className="recycler-name-new">{recycler.name || recycler.email || 'Reciclador'}</span>
+                        <span className="recycler-points-new">{recycler.puntaje_final || recycler.points || 0}</span>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          {/* Cómo puedo reciclar (desktop) */}
+          {!isMobile && (
+            <div className="how-to-recycle">
+              <h2>¿Cómo puedo reciclar?</h2>
+              <div className="steps-container">
+                <div className="step-card">
+                  <div className="step-number">1</div>
+                  <h3>Rellena el formulario</h3>
+                  <p>Apreta el botón recicla y rellena el formulario.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">2</div>
+                  <h3>Espera</h3>
+                  <p>Espera a que soliciten recoger tu material.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">3</div>
+                  <h3>Coordina</h3>
+                  <p>Si tienes una solicitud puedes aceptarla o rechazarla, habla con el recolector ante cualquier duda.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar Derecho - Anuncio */}
-        <div className="right-sidebar">
+        <div className="right-sidebar ui-animate ui-animate-right">
           <AnnouncementBanner role="reciclador" position="right" />
         </div>
       </div>
 
+      {/* Cómo puedo reciclar - Sección al nivel más bajo del index en móvil */}
+      {isMobile && (
+        <section className={`mobile-collapsible how-to-bottom-section ${showHowTo ? 'expanded' : ''}`}>
+          <button
+            type="button"
+            className="mobile-collapsible-toggle"
+            onClick={() => setShowHowTo((prev) => !prev)}
+            aria-expanded={showHowTo}
+          >
+            <span>¿Cómo puedo reciclar?</span>
+            <span className="mobile-collapsible-arrow">⌄</span>
+          </button>
+
+          <div className="mobile-collapsible-body">
+            <div className="how-to-recycle">
+              <h2>¿Cómo puedo reciclar?</h2>
+              <div className="steps-container">
+                <div className="step-card">
+                  <div className="step-number">1</div>
+                  <h3>Rellena el formulario</h3>
+                  <p>Apreta el botón recicla y rellena el formulario.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">2</div>
+                  <h3>Espera</h3>
+                  <p>Espera a que soliciten recoger tu material.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">3</div>
+                  <h3>Coordina</h3>
+                  <p>Si tienes una solicitud puedes aceptarla o rechazarla, habla con el recolector ante cualquier duda.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Bottom Navigation (solo móvil) */}
+      <nav className="mobile-bottom-nav" aria-label="Navegación móvil principal">
+        <button
+          type="button"
+          className={`mobile-nav-item ${location.pathname === '/notifications' ? 'active' : ''}`}
+          onClick={() => navigate('/notifications')}
+        >
+          <i className="bi bi-bell"></i>
+          <span>Notificaciones</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item mobile-nav-item-primary ${location.pathname === '/recycle-form' ? 'active' : ''}`}
+          onClick={() => navigate('/recycle-form')}
+        >
+          <i className="bi bi-recycle"></i>
+          <span>Reciclar</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${location.pathname === '/userInfo' ? 'active' : ''}`}
+          onClick={() => navigate('/userInfo')}
+        >
+          <i className="bi bi-person"></i>
+          <span>Perfil</span>
+        </button>
+      </nav>
+
       {/* Footer */}
-      <Footer />
+      {!isMobile && <Footer />}
     </div>
   );
 };
