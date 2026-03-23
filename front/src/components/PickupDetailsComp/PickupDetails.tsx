@@ -60,8 +60,8 @@ const PickupDetails: React.FC = () => {
       <Header />
 
       {/* Main Content with Bootstrap */}
-      <div className="container-fluid px-3 px-md-4 py-3">
-        <div className="row g-4 min-vh-100">
+      <div className="container-fluid px-3 px-md-4 py-3 pickupdetail-content">
+        <div className="row g-4 pickupdetail-main-row">
           
           {/* Botón Volver */}
           <div className="col-12">
@@ -74,23 +74,12 @@ const PickupDetails: React.FC = () => {
           </div>
 
           {/* Sección del Mapa */}
-          <div className="col-12 col-lg-8">
+          <div className="col-12 col-xl-7 col-xxl-8">
             <div className="pickupdetail-map-section">
-              <h3 className="mb-3" style={{ color: '#4C7C5B', fontWeight: '600' }}>
+              <h3 className="pickupdetail-section-title mb-3">
                  Ubicación del Recojo
               </h3>
-              <div
-                className="pickupdetail-map-wrapper"
-                style={{
-                  height: '600px',
-                  width: '100%',
-                  position: 'relative',
-                  border: '3px solid #4C7C5B',
-                  borderRadius: '1rem',
-                  overflow: 'hidden',
-                  backgroundColor: '#e6f3e6',
-                }}
-              >
+              <div className="pickupdetail-map-wrapper pickupdetail-map-frame">
                 <SimplePickupMap
                   markerPosition={mapLocation ? [mapLocation.lat, mapLocation.lng] : undefined}
                   center={mapLocation ? [mapLocation.lat, mapLocation.lng] : undefined}
@@ -101,7 +90,7 @@ const PickupDetails: React.FC = () => {
           </div>
 
           {/* Sección de información */}
-          <div className="col-12 col-lg-4">
+          <div className="col-12 col-xl-5 col-xxl-4">
             <div className="pickupdetail-info-section">
               <PickupInfo
                 requestId={id}

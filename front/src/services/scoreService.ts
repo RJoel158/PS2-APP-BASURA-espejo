@@ -82,7 +82,7 @@ export const getAppointmentScores = async (appointmentId: number): Promise<Score
  */
 export const getUserTotalScore = async (userId: number): Promise<UserScore> => {
   try {
-    const response = await api.get(`/api/score/user/${userId}/total`);
+    const response = await api.get(API_ENDPOINTS.SCORES.GET_USER_TOTAL(userId));
     return response.data.data;
   } catch (error) {
     console.error('[scoreService] Error getting total score:', error);

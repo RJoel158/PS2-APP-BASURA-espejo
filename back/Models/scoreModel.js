@@ -214,9 +214,14 @@ export const getUserAverageRating = async (userId) => {
     `;
     
     const [rows] = await db.query(query, [userId]);
+    const rawAverage = Number(rows?.[0]?.averageRating ?? 0);
+    const normalizedAverage = Number.isFinite(rawAverage)
+      ? Math.round(rawAverage * 100) / 100
+      : 0;
+
     return {
-      averageRating: parseFloat(rows[0].averageRating.toFixed(2)),
-      totalRatings: parseInt(rows[0].totalRatings)
+      averageRating: normalizedAverage,
+      totalRatings: parseInt(rows?.[0]?.totalRatings ?? 0, 10)
     };
   } catch (err) {
     console.error('[ERROR] ScoreModel.getUserAverageRating:', err);

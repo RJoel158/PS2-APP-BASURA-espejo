@@ -182,6 +182,7 @@ router.put('/notifications/read', notificationController.markNotificationAsRead)
 router.post('/score', scoreController.createScore);
 router.get('/score/check/:appointmentId/:userId', scoreController.checkUserRated);
 router.get('/score/appointment/:appointmentId', scoreController.getAppointmentScores);
+router.get('/score/user/:userId/total', scoreController.getUserTotalScore);
 router.get('/score/user/:userId/average', scoreController.getUserAverageRating);
 
 // ==========================================

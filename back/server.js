@@ -52,13 +52,57 @@ const server = createServer(app);
 // Soporta múltiples orígenes separados por coma para túneles/dev
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
-  .map(o => o.trim());
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const normalizeOrigin = (value) => (value || '').trim().replace(/\/+$/, '');
+const localhostHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+const parseOrigin = (value) => {
+  try {
+    return new URL(normalizeOrigin(value));
+  } catch {
+    return null;
+  }
+};
+
+const isTryCloudflareOrigin = (origin) => {
+  const parsed = parseOrigin(origin);
+  return Boolean(parsed?.hostname?.endsWith('.trycloudflare.com'));
+};
+
+const isEquivalentLocalOrigin = (origin, allowed) => {
+  const originUrl = parseOrigin(origin);
+  const allowedUrl = parseOrigin(allowed);
+  if (!originUrl || !allowedUrl) return false;
+
+  return (
+    localhostHosts.has(originUrl.hostname) &&
+    localhostHosts.has(allowedUrl.hostname) &&
+    originUrl.protocol === allowedUrl.protocol &&
+    originUrl.port === allowedUrl.port
+  );
+};
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (isTryCloudflareOrigin(normalizedOrigin)) return true;
+
+  return allowedOrigins.some((allowed) => {
+    const normalizedAllowed = normalizeOrigin(allowed);
+    if (normalizedAllowed === '*') return true;
+    if (normalizedOrigin === normalizedAllowed) return true;
+    return isEquivalentLocalOrigin(normalizedOrigin, normalizedAllowed);
+  });
+};
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Permitir requests sin origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.trycloudflare.com'))) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
     callback(new Error('Not allowed by CORS'));
@@ -72,7 +116,7 @@ const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.trycloudflare.com'))) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
       callback(new Error('Not allowed by CORS'));
@@ -85,6 +129,7 @@ const io = new Server(server, {
 const connectedUsers = new Map();
 
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json({ 
   limit: process.env.MAX_FILE_SIZE || '10mb' 
 }));

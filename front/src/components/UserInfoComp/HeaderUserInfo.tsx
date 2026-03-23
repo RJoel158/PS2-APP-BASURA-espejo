@@ -4,16 +4,16 @@ import logoText from "../../assets/logoText.svg";
 
 const HeaderUserInfo: React.FC = () => {
   return (
-    <header className="header d-flex align-items-center justify-content-between">
-      <div className="header-logo-container">
-        <img src={logoText} alt="Logo GreenBit" className="logo-img" />
+    <header className="user-info-header">
+      <div className="user-info-header-logo">
+        <img src={logoText} alt="Logo GreenBit" className="user-info-header-logo-img" />
       </div>
 
-      <h1 className="header-title text-center flex-grow-1 fw-bold">
+      <h1 className="user-info-header-title">
         Información de usuario
       </h1>
 
-      <div className="header-spacer"></div>
+      <div className="user-info-header-spacer"></div>
     </header>
   );
 };

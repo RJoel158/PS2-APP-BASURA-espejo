@@ -32,6 +32,7 @@ const UserInfo: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
   const navigate=useNavigate();
 
   // Función para cargar puntajes del usuario
@@ -55,53 +56,46 @@ const UserInfo: React.FC = () => {
   };
 
   useEffect(() => {
-    
-    const userStr = localStorage.getItem("user");
-    //Revisa si hay un usuario con la sesión iniciada
-    if(!userStr){
-      navigate("/login", { replace: true });
-      return;
-    }
-    if (userStr) {
-      const parsedUser = JSON.parse(userStr);
-      setRole(parsedUser.role);
-      const userId = parsedUser.id;
-      
-      // Buscar id como persona
-      api.get(API_ENDPOINTS.USERS.GET_USER(userId))
-        .then((response) => {
-          if (response.data.success && response.data.user) {
-            // Si firstname y lastname no son null, es persona
-            if (response.data.user.firstname !== null && response.data.user.lastname !== null) {
-              setUser(response.data.user);
-              // Cargar puntaje total y promedio de rating
-              loadUserScores(userId);
-              setLoading(false);
-            } else {
-              // firstname y lastname son null, intentar como institución
-              api.get(API_ENDPOINTS.USERS.GET_USER_WITH_INSTITUTION(userId))
-                .then((institutionResponse) => {
-                  if (institutionResponse.data.success && institutionResponse.data.user) {
-                    setUser(institutionResponse.data.user);
-                    // Cargar puntaje total y promedio de rating
-                    loadUserScores(userId);
-                  }
-                  setLoading(false);
-                })
-                .catch((err) => {
-                  console.error('Error al obtener institución:', err);
-                  setLoading(false);
-                });
-            }
-          } else {
-            setLoading(false);
+    const loadProfile = async () => {
+      const userStr = localStorage.getItem("user");
+      //Revisa si hay un usuario con la sesión iniciada
+      if(!userStr){
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      try {
+        const parsedUser = JSON.parse(userStr);
+        setRole(parsedUser.role || "");
+        const userId = Number(parsedUser.id);
+
+        const response = await api.get(API_ENDPOINTS.USERS.GET_USER(userId));
+        if (!response.data.success || !response.data.user) {
+          throw new Error('No se pudo obtener la información del usuario');
+        }
+
+        let resolvedUser = response.data.user;
+        const hasPersonData = Boolean(resolvedUser.firstname || resolvedUser.lastname);
+        const hasInstitutionData = Boolean(resolvedUser.companyName || resolvedUser.nit);
+
+        if (!hasPersonData && !hasInstitutionData) {
+          const institutionResponse = await api.get(API_ENDPOINTS.USERS.GET_USER_WITH_INSTITUTION(userId));
+          if (institutionResponse.data.success && institutionResponse.data.user) {
+            resolvedUser = institutionResponse.data.user;
           }
-        })
-        .catch((err) => {
-          console.error('Error al obtener usuario:', err);
-          setLoading(false);
-        });
-    }
+        }
+
+        setUser(resolvedUser);
+        await loadUserScores(userId);
+      } catch (err) {
+        console.error('Error al obtener perfil de usuario:', err);
+        setError('No se pudo cargar la información del perfil.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
   }, [navigate]);
 
   const handleBack = () => {
@@ -120,6 +114,21 @@ const UserInfo: React.FC = () => {
     : user?.firstname && user?.lastname 
       ? `${user.firstname} ${user.lastname}`.trim()
       : 'Nombre completo';
+
+  const formattedRegisterDate = user?.registerDate
+    ? new Date(user.registerDate).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      })
+    : 'Sin fecha registrada';
+
+  const displayPhone = user?.phone || 'Sin teléfono registrado';
+  const displayEmail = user?.email || 'Sin correo registrado';
+  const displayRole = role || 'usuario';
+
+  const ratingValue = user?.averageRating ?? 0;
+  const ratingStars = Math.max(0, Math.min(5, Math.round(ratingValue)));
 
   // Mostrar loading mientras se cargan los datos
   if (loading) {
@@ -140,123 +149,93 @@ const UserInfo: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="user-info-container">
+        <HeaderUserInfo />
+        <div className="user-info-wrapper">
+          <div className="user-info-card">
+            <div className="loading-container">
+              <p className="loading-text">{error}</p>
+              <button className="btn btn-outline-success" onClick={handleBack}>Volver</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="user-info-container">
       <HeaderUserInfo />
 
       <div className="user-info-wrapper">
         <div className="user-info-card">
-          <h2 className="user-title">
-            {isInstitution ? '🏢 ' : '👤 '}{displayName}
-          </h2>
+          <div className="user-top-actions">
+            <button className="btn btn-outline-success user-back-inline" onClick={handleBack}>
+              ← Volver
+            </button>
+          </div>
 
-          <div className="user-avatar-large" style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            margin: '20px auto'
-          }}>
-            <div style={{
-              width: '150px',
-              height: '150px',
-              borderRadius: '50%',
-              backgroundColor: '#149D52',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '4rem',
-              fontWeight: 'bold',
-              color: 'white',
-              lineHeight: '1',
-              textAlign: 'center'
-            }}>
-              {user?.email?.charAt(0).toUpperCase() || 'U'}
+          <div className="user-hero">
+            <h2 className="user-title">
+              {isInstitution ? 'Perfil institucional' : 'Perfil de usuario'}
+            </h2>
+
+            <div className="user-avatar-large">
+              <span className="user-avatar-initial">
+                {(displayName?.charAt(0) || 'U').toUpperCase()}
+              </span>
+            </div>
+
+            <h3 className="user-display-name">{displayName}</h3>
+
+            <div className="user-role mt-2 mb-3">
+              <span className="role-badge">{displayRole}</span>
             </div>
           </div>
 
-          <div className="user-role mt-3 mb-4">
-            <span className="role-badge">{role || "Rol"}</span>
-          </div>
-
-          <div className="user-form">
+          <div className="user-details-grid">
             {isInstitution && user?.companyName && (
-              <div className="form-group">
-                <label>Nombre de la Empresa:</label>
-                <input
-                  type="text"
-                  className="form-control form-input"
-                  value={user.companyName}
-                  readOnly
-                />
+              <div className="detail-item">
+                <span className="detail-label">Nombre de la Empresa</span>
+                <span className="detail-value">{user.companyName}</span>
               </div>
             )}
 
             {isInstitution && user?.nit && (
-              <div className="form-group">
-                <label>NIT:</label>
-                <input
-                  type="text"
-                  className="form-control form-input"
-                  value={user.nit}
-                  readOnly
-                />
+              <div className="detail-item">
+                <span className="detail-label">NIT</span>
+                <span className="detail-value">{user.nit}</span>
               </div>
             )}
 
-            <div className="form-group">
-              <label>{isInstitution ? "Teléfono de Contacto:" : "Número de Referencia:"}</label>
-              <input
-                type="text"
-                className="form-control form-input"
-                value={user?.phone || ""}
-                readOnly
-              />
+            <div className="detail-item">
+              <span className="detail-label">{isInstitution ? "Teléfono de Contacto" : "Número de Referencia"}</span>
+              <span className="detail-value">{displayPhone}</span>
             </div>
 
-            <div className="form-group">
-              <label>Correo electrónico:</label>
-              <input
-                type="email"
-                className="form-control form-input"
-                value={user?.email || ""}
-                readOnly
-              />
+            <div className="detail-item">
+              <span className="detail-label">Correo electrónico</span>
+              <span className="detail-value detail-value-wrap">{displayEmail}</span>
             </div>
 
-            <div className="form-group">
-              <label>Inicio como {role || ""}:</label>
-              <input
-                type="text"
-                className="form-control form-input"
-                value={user ? new Date(user.registerDate).toLocaleDateString() : ""}
-                readOnly
-              />
+            <div className="detail-item">
+              <span className="detail-label">Inicio como {displayRole}</span>
+              <span className="detail-value">{formattedRegisterDate}</span>
             </div>
 
-            <div className="form-group">
-              <label>Puntos Totales (Ranking):</label>
-              <div className="points-input d-flex align-items-center">
-                <input
-                  type="text"
-                  className="form-control form-input"
-                  value={user?.totalScore !== undefined ? user.totalScore : 0}
-                  readOnly
-                />
-              </div>
+            <div className="detail-item detail-item-highlight">
+              <span className="detail-label">Puntos Totales (Ranking)</span>
+              <span className="detail-value">{user?.totalScore !== undefined ? user.totalScore : 0}</span>
             </div>
 
-            <div className="form-group">
-              <label>Calificación Promedio:</label>
-              <div className="rating-display d-flex align-items-center gap-2">
-                <span className="stars">
-                  {'⭐'.repeat(Math.round(user?.averageRating || 0))}
-                </span>
-                <span className="rating-text">
-                  {user?.averageRating?.toFixed(2) || '0.00'} / 5.00
-                </span>
-                <span className="rating-count text-muted">
-                  ({user?.totalRatings || 0} calificaciones)
-                </span>
+            <div className="detail-item detail-item-rating">
+              <span className="detail-label">Calificación Promedio</span>
+              <div className="rating-display">
+                <span className="stars">{'⭐'.repeat(ratingStars)}</span>
+                <span className="rating-text">{ratingValue.toFixed(2)} / 5.00</span>
+                <span className="rating-count">({user?.totalRatings || 0} calificaciones)</span>
               </div>
             </div>
           </div>
@@ -266,11 +245,6 @@ const UserInfo: React.FC = () => {
           </div>
         </div>
       </div>
-
-
-      <button className="btn-back btn btn-outline-success" onClick={handleBack}>
-        ← Volver
-      </button>
     </div>
   );
 };

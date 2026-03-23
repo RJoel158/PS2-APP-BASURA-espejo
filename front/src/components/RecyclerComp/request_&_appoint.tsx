@@ -29,6 +29,18 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Trigger para refrescar historial
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    solicitudes: true,
+    citas: false,
+    historial: false,
+    pendientes: true,
+    citasCollector: false,
+    historialCollector: false
+  });
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Función para refrescar el historial (se llama desde otros componentes)
   // const refreshHistory = () => {
@@ -133,7 +145,7 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
 
   const renderAppointmentSidebarCard = (appointment: Appointment) => (
     <div key={appointment.id} className="request-card green">
-      <div className="card-icon">♻️</div>
+      <div className="card-icon"><i className="bi bi-recycle" aria-hidden="true"></i></div>
       <h4>{appointment.materialName || 'Reciclaje de cartón'}</h4>
       <p>{appointment.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
       <Link 
@@ -142,6 +154,23 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
       >
         Ver Detalles
       </Link>
+    </div>
+  );
+
+  const renderRequestSidebarCard = (request: Request, idx: number) => (
+    <div key={request.id} className={`request-card ${idx === 0 ? 'orange' : 'green'}`}>
+      <div className="card-icon"><i className="bi bi-box-seam" aria-hidden="true"></i></div>
+      <h4>{request.materialName || 'Reciclaje de cartón'}</h4>
+      <p>{request.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
+      <Link to={`/pickupDetails/${request.id}`} className="btn-details">
+        Ver Detalles
+      </Link>
+    </div>
+  );
+
+  const renderCarousel = (cards: React.ReactNode[]) => (
+    <div className="appointments-carousel" role="region" aria-label="Lista desplazable horizontal">
+      {cards}
     </div>
   );
 
@@ -177,28 +206,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header active"
-              onClick={() => {
-                const content = document.getElementById('solicitudes-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('solicitudes')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.solicitudes ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-box-seam section-icon" aria-hidden="true"></i>
               <h3>Solicitudes activas</h3>
             </div>
-            <div id="solicitudes-content" className="sidebar-content">
+            <div className={`sidebar-content ${expandedSections.solicitudes ? '' : 'collapsed'}`}>
               {activeRequests.length > 0 ? (
-                activeRequests.slice(0, 2).map((request, idx) => (
-                  <div key={request.id} className={`request-card ${idx === 0 ? 'orange' : 'green'}`}>
-                    <div className="card-icon">♻️</div>
-                   <h4>{request.materialName || 'Reciclaje de cartón'}</h4>
-                    <p>{request.description || '2 cajas medianas de cartón en buen estado para reciclar'}</p>
-                    <Link to={`/pickupDetails/${request.id}`} className="btn-details">
-                      Ver Detalles
-                    </Link>
-                  </div>
-                ))
+                renderCarousel(activeRequests.slice(0, 5).map((request, idx) => renderRequestSidebarCard(request, idx)))
               ) : (
                 <div className="no-data-sidebar">No hay solicitudes activas</div>
               )}
@@ -209,19 +225,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header"
-              onClick={() => {
-                const content = document.getElementById('citas-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('citas')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.citas ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-calendar2-check section-icon" aria-hidden="true"></i>
               <h3>Citas activas</h3>
             </div>
-            <div id="citas-content" className="sidebar-content collapsed">
+            <div className={`sidebar-content ${expandedSections.citas ? '' : 'collapsed'}`}>
               {activeAppointments.length > 0 ? (
-                activeAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+                renderCarousel(activeAppointments.slice(0, 5).map(renderAppointmentSidebarCard))
               ) : (
                 <div className="no-data-sidebar">No hay citas activas</div>
               )}
@@ -232,19 +244,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header"
-              onClick={() => {
-                const content = document.getElementById('historial-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('historial')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.historial ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-check2-circle section-icon" aria-hidden="true"></i>
               <h3>Historial de citas</h3>
             </div>
-            <div id="historial-content" className="sidebar-content collapsed">
+            <div className={`sidebar-content ${expandedSections.historial ? '' : 'collapsed'}`}>
               {appointmentHistory.length > 0 ? (
-                appointmentHistory.slice(0, 2).map(renderAppointmentSidebarCard)
+                renderCarousel(appointmentHistory.slice(0, 5).map(renderAppointmentSidebarCard))
               ) : (
                 <div className="no-data-sidebar">No hay historial</div>
               )}
@@ -258,19 +266,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header active"
-              onClick={() => {
-                const content = document.getElementById('pendientes-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('pendientes')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.pendientes ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-clock-history section-icon" aria-hidden="true"></i>
               <h3>Citas pendientes</h3>
             </div>
-            <div id="pendientes-content" className="sidebar-content">
+            <div className={`sidebar-content ${expandedSections.pendientes ? '' : 'collapsed'}`}>
               {pendingAppointments.length > 0 ? (
-                pendingAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+                renderCarousel(pendingAppointments.slice(0, 5).map(renderAppointmentSidebarCard))
               ) : (
                 <div className="no-data-sidebar">No hay citas pendientes</div>
               )}
@@ -281,19 +285,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header"
-              onClick={() => {
-                const content = document.getElementById('citas-collector-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('citasCollector')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.citasCollector ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-calendar2-check section-icon" aria-hidden="true"></i>
               <h3>Citas activas</h3>
             </div>
-            <div id="citas-collector-content" className="sidebar-content collapsed">
+            <div className={`sidebar-content ${expandedSections.citasCollector ? '' : 'collapsed'}`}>
               {activeAppointments.length > 0 ? (
-                activeAppointments.slice(0, 2).map(renderAppointmentSidebarCard)
+                renderCarousel(activeAppointments.slice(0, 5).map(renderAppointmentSidebarCard))
               ) : (
                 <div className="no-data-sidebar">No hay citas activas</div>
               )}
@@ -305,19 +305,15 @@ export default function RequestAndAppoint({ user }: RequestAndAppointProps) {
           <div className="sidebar-section">
             <div 
               className="sidebar-header"
-              onClick={() => {
-                const content = document.getElementById('historial-collector-content');
-                if (content) {
-                  content.classList.toggle('collapsed');
-                }
-              }}
+              onClick={() => toggleSection('historialCollector')}
             >
-              <span className="arrow">›</span>
+              <span className={`arrow ${expandedSections.historialCollector ? 'rotated' : ''}`}>›</span>
+              <i className="bi bi-check2-circle section-icon" aria-hidden="true"></i>
               <h3>Historial de citas</h3>
             </div>
-            <div id="historial-collector-content" className="sidebar-content collapsed">
+            <div className={`sidebar-content ${expandedSections.historialCollector ? '' : 'collapsed'}`}>
               {appointmentHistory.length > 0 ? (
-                appointmentHistory.slice(0, 2).map(renderAppointmentSidebarCard)
+                renderCarousel(appointmentHistory.slice(0, 5).map(renderAppointmentSidebarCard))
               ) : (
                 <div className="no-data-sidebar">No hay historial</div>
               )}

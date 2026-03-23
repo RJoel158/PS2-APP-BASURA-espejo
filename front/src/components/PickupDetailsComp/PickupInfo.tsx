@@ -682,6 +682,14 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                 {appointmentData.acceptedHour}
               </p>
             </div>
+            <div className="pickupdetail-info-block pickupdetail-info-block-highlight">
+              <h3 className="pickupdetail-info-label">
+                Estado de Cita
+              </h3>
+              <p className="pickupdetail-info-value">
+                {getAppointmentStateLabel(appointmentData.state)}
+              </p>
+            </div>
             <div className="pickupdetail-info-block">
               <h3 className="pickupdetail-info-label">
                 Recolector
@@ -692,7 +700,7 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                     🏢 {appointmentData.collectorCompanyName}
                   </p>
                   {appointmentData.collectorNit && (
-                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                    <p className="pickupdetail-info-value pickupdetail-info-subvalue">
                       NIT: {appointmentData.collectorNit}
                     </p>
                   )}
@@ -703,7 +711,7 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                     {appointmentData.collectorName || 'No asignado'}
                   </p>
                   {appointmentData.collectorPhone && (
-                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                    <p className="pickupdetail-info-value pickupdetail-info-subvalue">
                       Tel: {appointmentData.collectorPhone}
                     </p>
                   )}
@@ -720,7 +728,7 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                     🏢 {appointmentData.recyclerCompanyName}
                   </p>
                   {appointmentData.recyclerNit && (
-                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                    <p className="pickupdetail-info-value pickupdetail-info-subvalue">
                       NIT: {appointmentData.recyclerNit}
                     </p>
                   )}
@@ -731,20 +739,12 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                     {appointmentData.recyclerName || 'No asignado'}
                   </p>
                   {appointmentData.recyclerPhone && (
-                    <p className="pickupdetail-info-value" style={{ fontSize: '0.9em', color: '#666' }}>
+                    <p className="pickupdetail-info-value pickupdetail-info-subvalue">
                       Tel: {appointmentData.recyclerPhone}
                     </p>
                   )}
                 </>
               )}
-            </div>
-            <div className="pickupdetail-info-block">
-              <h3 className="pickupdetail-info-label">
-                Estado de Cita
-              </h3>
-              <p className="pickupdetail-info-value">
-                {getAppointmentStateLabel(appointmentData.state)}
-              </p>
             </div>
           </>
         ) : requestData ? (
@@ -779,7 +779,7 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
 
       {/* Botones según el estado de la cita */}
       {isAppointmentView && appointmentData && (
-        <div className="pickupdetail-actions" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+        <div className="pickupdetail-actions">
           {/* Botones para estado PENDING (0) - SOLO el Reciclador puede aceptar o rechazar */}
           {appointmentData.state === APPOINTMENT_STATE.PENDING && isRecycler() && (
             <>
