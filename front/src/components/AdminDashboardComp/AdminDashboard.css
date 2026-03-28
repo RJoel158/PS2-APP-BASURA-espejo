@@ -350,8 +350,45 @@ body {
   min-width: 0;
 }
 
+.dashboard-top-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-left-column,
+.dashboard-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.tops-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-left-column .tops-row {
+  margin-top: 0;
+}
+
 /* Fila de gráficos */
 .charts-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.charts-side-stack {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -886,6 +923,31 @@ body {
     flex-direction: row;
   }
 
+  .charts-side-stack {
+    width: 100%;
+  }
+
+  .dashboard-top-layout {
+    flex-direction: row;
+  }
+
+  .dashboard-left-column {
+    flex: 1.6;
+  }
+
+  .dashboard-right-column {
+    flex: 1;
+  }
+
+  .tops-row {
+    flex-direction: row;
+  }
+
+  .tops-row > * {
+    flex: 1;
+    min-width: 0;
+  }
+
   .lists-row {
     flex-direction: row;
     flex-wrap: wrap;
@@ -926,6 +988,32 @@ body {
   /* Fila 1: 2 gráficos (RecyclingChart más grande) */
   .charts-row {
     flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .dashboard-top-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .dashboard-left-column {
+    flex: 2;
+    min-width: 0;
+  }
+
+  .dashboard-right-column {
+    flex: 1;
+    min-width: 280px;
+    max-width: 33.333%;
+  }
+
+  .tops-row {
+    flex-direction: row;
+  }
+
+  .tops-row > * {
+    flex: 1;
+    min-width: 0;
   }
 
   .charts-row > :first-child {
@@ -940,6 +1028,11 @@ body {
     max-width: 33.333%;
   }
 
+  .charts-side-stack {
+    justify-content: flex-start;
+    gap: 1.25rem;
+  }
+
   /* Fila 2: 3 listas */
   .lists-row {
     flex-direction: row;
@@ -949,5 +1042,25 @@ body {
     flex: 1;
     min-width: 0;
     max-width: 33.333%;
+  }
+}
+
+@media (min-width: 1400px) {
+  .dashboard-left-column {
+    flex: 1.75;
+  }
+
+  .dashboard-right-column {
+    max-width: 36%;
+  }
+
+  .charts-row > :first-child {
+    flex: 1.75;
+    max-width: 64%;
+  }
+
+  .charts-row > :last-child {
+    flex: 1;
+    max-width: 36%;
   }
 }

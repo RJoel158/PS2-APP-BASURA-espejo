@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import RecyclingChart from './RecyclingCharts';
 import MostRecycled from './MostRecycled';
+import ClockConfiguration from './ClockConfiguration.tsx';
 import PendingApprovals from './PendingApprovals';
 import TopRecyclers from './TopRecyclers';
 import TopCollectors from './TopCollectors';
@@ -98,17 +99,20 @@ export default function AdminDashboard() {
         return (
           <div className="dashboard-content">
             <div className="dashboard-grid">
-              {/* Fila 1: Gráficos */}
-              <div className="charts-row">
-                <RecyclingChart />
-                <MostRecycled />
-              </div>
-              
-              {/* Fila 2: Listas */}
-              <div className="lists-row">
-                <PendingApprovals setActiveMenu={setActiveMenu} />
-                <TopRecyclers setActiveMenu={setActiveMenu} />
-                <TopCollectors setActiveMenu={setActiveMenu} />
+              <div className="dashboard-top-layout">
+                <div className="dashboard-left-column">
+                  <RecyclingChart />
+                  <PendingApprovals setActiveMenu={setActiveMenu} />
+                  <div className="tops-row">
+                    <TopRecyclers setActiveMenu={setActiveMenu} />
+                    <TopCollectors setActiveMenu={setActiveMenu} />
+                  </div>
+                </div>
+
+                <div className="dashboard-right-column">
+                  <MostRecycled />
+                  <ClockConfiguration />
+                </div>
               </div>
             </div>
           </div>
@@ -131,14 +135,20 @@ export default function AdminDashboard() {
         return (
           <div className="dashboard-content">
             <div className="dashboard-grid">
-              <div className="charts-row">
-                <RecyclingChart />
-                <MostRecycled />
-              </div>
-              <div className="lists-row">
-                <PendingApprovals />
-                <TopRecyclers />
-                <TopCollectors />
+              <div className="dashboard-top-layout">
+                <div className="dashboard-left-column">
+                  <RecyclingChart />
+                  <PendingApprovals />
+                  <div className="tops-row">
+                    <TopRecyclers />
+                    <TopCollectors />
+                  </div>
+                </div>
+
+                <div className="dashboard-right-column">
+                  <MostRecycled />
+                  <ClockConfiguration />
+                </div>
               </div>
             </div>
           </div>
