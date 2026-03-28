@@ -1336,7 +1336,8 @@
   
   .banner-left,
   .banner-right {
-    height: 120px;
+    height: auto;
+    min-height: 0;
     border-radius: 15px;
   }
   
@@ -1394,7 +1395,8 @@
   
   .banner-left,
   .banner-right {
-    height: 100px;
+    height: auto;
+    min-height: 0;
     border-radius: 12px;
   }
 }
@@ -1533,7 +1535,7 @@
 @media (max-width: 480px) {
   .recycler-header {
     flex-wrap: wrap;
-    min-height: auto;
+    min-height: 0;
     padding: 8px 10px !important;
   }
 
@@ -1670,13 +1672,15 @@
 /* Recycler-specific mobile hardening: prevent sideways scroll and render announcements responsively */
 @media (max-width: 768px) {
   .recycling-container.recycler-role-view,
+  .recycling-container.is-mobile-view,
   .recycling-container.recycler-role-view.is-mobile-view {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
   }
 
-  .recycling-container.recycler-role-view .main-content-new {
+  .recycling-container.recycler-role-view .main-content-new,
+  .recycling-container.is-mobile-view .main-content-new {
     grid-template-columns: 1fr !important;
     width: 100%;
     max-width: 100%;
@@ -1684,36 +1688,57 @@
   }
 
   .recycling-container.recycler-role-view .left-sidebar,
+  .recycling-container.is-mobile-view .left-sidebar,
   .recycling-container.recycler-role-view .center-content,
+  .recycling-container.is-mobile-view .center-content,
   .recycling-container.recycler-role-view .right-sidebar,
+  .recycling-container.is-mobile-view .right-sidebar,
   .recycling-container.recycler-role-view .sidebar-sections,
+  .recycling-container.is-mobile-view .sidebar-sections,
   .recycling-container.recycler-role-view .sidebar-section {
     min-width: 0;
     max-width: 100%;
   }
 
-  .recycling-container.recycler-role-view .right-sidebar {
+  .recycling-container.recycler-role-view .right-sidebar,
+  .recycling-container.is-mobile-view .right-sidebar {
     display: block !important;
     order: 3;
     width: 100%;
     margin-top: 2px;
   }
 
-  .recycling-container.recycler-role-view .announcement-sidebar-card {
+  .recycling-container.recycler-role-view .announcement-sidebar-card,
+  .recycling-container.is-mobile-view .announcement-sidebar-card {
     width: 100%;
     max-width: 100%;
+    height: auto !important;
     border-radius: 14px;
     overflow: hidden;
+    margin-bottom: 12px;
   }
 
-  .recycling-container.recycler-role-view .announcement-image-section {
+  .recycling-container.recycler-role-view .banner-right,
+  .recycling-container.recycler-role-view .banner-left,
+  .recycling-container.is-mobile-view .banner-right,
+  .recycling-container.is-mobile-view .banner-left {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .recycling-container.recycler-role-view .announcement-image-section,
+  .recycling-container.is-mobile-view .announcement-image-section {
     height: auto;
     min-height: 0;
-    aspect-ratio: 16 / 9;
     background: #eef3e4;
   }
 
-  .recycling-container.recycler-role-view .announcement-image {
+  .recycling-container.recycler-role-view .announcement-image,
+  .recycling-container.is-mobile-view .announcement-image {
+    width: 100%;
+    height: auto;
+    max-height: 320px;
+    display: block;
     object-fit: contain;
     background: #eef3e4;
   }
@@ -1723,7 +1748,17 @@
     gap: 10px;
   }
 
+  .recycling-container.is-mobile-view .announcement-content-section {
+    padding: 14px;
+    gap: 10px;
+  }
+
   .recycling-container.recycler-role-view .announcement-title {
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .recycling-container.is-mobile-view .announcement-title {
     font-size: 17px;
     line-height: 1.25;
   }
@@ -1733,7 +1768,17 @@
     line-height: 1.5;
   }
 
+  .recycling-container.is-mobile-view .announcement-description {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
   .recycling-container.recycler-role-view .announcement-explore-btn {
+    font-size: 13px;
+    padding: 9px 18px;
+  }
+
+  .recycling-container.is-mobile-view .announcement-explore-btn {
     font-size: 13px;
     padding: 9px 18px;
   }
