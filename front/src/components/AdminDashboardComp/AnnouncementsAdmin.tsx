@@ -76,6 +76,17 @@ const AnnouncementsAdmin: React.FC = () => {
     targetRole: 'both' as 'recolector' | 'reciclador' | 'both',
   });
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Cargar anuncios al montar el componente
   useEffect(() => {
     loadAnnouncements();
@@ -444,7 +455,8 @@ const AnnouncementsAdmin: React.FC = () => {
       flexDirection: 'column', 
       backgroundColor: '#FAF8F1', 
       overflow: 'hidden',
-      height: '100vh'
+      height: '100%',
+      minHeight: 0
     }}>
       {/* Header */}
       <CommonHeader
@@ -512,12 +524,12 @@ const AnnouncementsAdmin: React.FC = () => {
         <div style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '2rem'
+          padding: isMobile ? '1rem' : '2rem'
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1fr',
-            gap: '2rem',
+            gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
+            gap: isMobile ? '1rem' : '2rem',
             height: 'fit-content'
           }}>
             {/* Table Section */}
@@ -538,149 +550,216 @@ const AnnouncementsAdmin: React.FC = () => {
                 </h2>
               </div>
 
-              <div style={{
-                overflow: 'hidden',
-                borderRadius: '0.5rem',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                backgroundColor: 'white'
-              }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                  <thead>
-                    <tr style={{
-                      backgroundColor: '#dcfce7',
-                      borderBottom: '2px solid #149D52'
+              {isMobile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {filteredAnnouncements.length > 0 ? (
+                    filteredAnnouncements.map((announcement) => (
+                      <button
+                        key={announcement.id}
+                        onClick={() => handleSelectAnnouncement(announcement)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.6rem',
+                          padding: '0.85rem',
+                          backgroundColor: selectedAnnouncement?.id === announcement.id ? '#e8f5e9' : '#ffffff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ fontSize: '0.95rem', fontWeight: '600', color: '#149D52', marginBottom: '0.45rem', wordBreak: 'break-word' }}>
+                          {announcement.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+                          <span style={{
+                            backgroundColor: '#e3f2fd',
+                            color: '#1565c0',
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '600'
+                          }}>
+                            {announcement.targetRole}
+                          </span>
+                          <span style={{
+                            backgroundColor: announcement.state === 1 ? '#e8f5e9' : '#ffebee',
+                            color: announcement.state === 1 ? '#2d8659' : '#c62828',
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: '600'
+                          }}>
+                            {announcement.state === 1 ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                          {new Date(announcement.createdDate).toLocaleDateString('es-ES')}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div style={{
+                      padding: '2rem 1rem',
+                      textAlign: 'center',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.6rem',
+                      color: '#9ca3af',
+                      backgroundColor: '#ffffff',
+                      fontSize: '0.9rem'
                     }}>
-                      <th style={{
-                        padding: '0.875rem 1.5rem',
-                        textAlign: 'left',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#149D52'
+                      No hay anuncios disponibles
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  backgroundColor: 'white',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
+                  <table style={{
+                    width: '100%',
+                    minWidth: '100%',
+                    borderCollapse: 'collapse',
+                    fontFamily: 'system-ui, -apple-system, sans-serif'
+                  }}>
+                    <thead>
+                      <tr style={{
+                        backgroundColor: '#dcfce7',
+                        borderBottom: '2px solid #149D52'
                       }}>
-                        Título
-                      </th>
-                      <th style={{
-                        padding: '0.875rem 1.5rem',
-                        textAlign: 'left',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#149D52'
-                      }}>
-                        Rol
-                      </th>
-                      <th style={{
-                        padding: '0.875rem 1.5rem',
-                        textAlign: 'left',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#149D52'
-                      }}>
-                        Estado
-                      </th>
-                      <th style={{
-                        padding: '0.875rem 1.5rem',
-                        textAlign: 'left',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        color: '#149D52'
-                      }}>
-                        Fecha
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAnnouncements.length > 0 ? (
-                      filteredAnnouncements.map((announcement) => (
-                        <tr 
-                          key={announcement.id}
-                          onClick={() => handleSelectAnnouncement(announcement)}
-                          style={{
-                            borderBottom: '1px solid #e5e7eb',
-                            backgroundColor: selectedAnnouncement?.id === announcement.id ? '#e8f5e9' : '#FAF8F1',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (selectedAnnouncement?.id !== announcement.id) {
-                              e.currentTarget.style.backgroundColor = '#f3f4f6';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = selectedAnnouncement?.id === announcement.id ? '#e8f5e9' : '#FAF8F1';
-                          }}
-                        >
-                          <td style={{
-                            padding: '1rem 1.5rem',
-                            fontSize: '0.9rem',
-                            color: '#374151',
-                            fontWeight: '500'
-                          }}>
-                            {announcement.title}
-                          </td>
-                          <td style={{
-                            padding: '1rem 1.5rem',
-                            fontSize: '0.9rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{
-                              backgroundColor: '#e3f2fd',
-                              color: '#1565c0',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.8rem',
-                              fontWeight: '600'
+                        <th style={{
+                          padding: '0.875rem 1.5rem',
+                          textAlign: 'left',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: '#149D52'
+                        }}>
+                          Título
+                        </th>
+                        <th style={{
+                          padding: '0.875rem 1.5rem',
+                          textAlign: 'left',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: '#149D52'
+                        }}>
+                          Rol
+                        </th>
+                        <th style={{
+                          padding: '0.875rem 1.5rem',
+                          textAlign: 'left',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: '#149D52'
+                        }}>
+                          Estado
+                        </th>
+                        <th style={{
+                          padding: '0.875rem 1.5rem',
+                          textAlign: 'left',
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: '#149D52'
+                        }}>
+                          Fecha
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAnnouncements.length > 0 ? (
+                        filteredAnnouncements.map((announcement) => (
+                          <tr 
+                            key={announcement.id}
+                            onClick={() => handleSelectAnnouncement(announcement)}
+                            style={{
+                              borderBottom: '1px solid #e5e7eb',
+                              backgroundColor: selectedAnnouncement?.id === announcement.id ? '#e8f5e9' : '#FAF8F1',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (selectedAnnouncement?.id !== announcement.id) {
+                                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = selectedAnnouncement?.id === announcement.id ? '#e8f5e9' : '#FAF8F1';
+                            }}
+                          >
+                            <td style={{
+                              padding: '1rem 1.5rem',
+                              fontSize: '0.9rem',
+                              color: '#374151',
+                              fontWeight: '500'
                             }}>
-                              {announcement.targetRole}
-                            </span>
-                          </td>
-                          <td style={{
-                            padding: '1rem 1.5rem',
-                            fontSize: '0.9rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{
-                              backgroundColor: announcement.state === 1 ? '#e8f5e9' : '#ffebee',
-                              color: announcement.state === 1 ? '#2d8659' : '#c62828',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.8rem',
-                              fontWeight: '600'
+                              {announcement.title}
+                            </td>
+                            <td style={{
+                              padding: '1rem 1.5rem',
+                              fontSize: '0.9rem',
+                              color: '#6b7280'
                             }}>
-                              {announcement.state === 1 ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td style={{
-                            padding: '1rem 1.5rem',
+                              <span style={{
+                                backgroundColor: '#e3f2fd',
+                                color: '#1565c0',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                fontWeight: '600'
+                              }}>
+                                {announcement.targetRole}
+                              </span>
+                            </td>
+                            <td style={{
+                              padding: '1rem 1.5rem',
+                              fontSize: '0.9rem',
+                              color: '#6b7280'
+                            }}>
+                              <span style={{
+                                backgroundColor: announcement.state === 1 ? '#e8f5e9' : '#ffebee',
+                                color: announcement.state === 1 ? '#2d8659' : '#c62828',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                fontWeight: '600'
+                              }}>
+                                {announcement.state === 1 ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                            <td style={{
+                              padding: '1rem 1.5rem',
+                              fontSize: '0.9rem',
+                              color: '#6b7280'
+                            }}>
+                              {new Date(announcement.createdDate).toLocaleDateString('es-ES')}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} style={{
+                            padding: '3rem 1.5rem',
+                            textAlign: 'center',
                             fontSize: '0.9rem',
-                            color: '#6b7280'
+                            color: '#9ca3af'
                           }}>
-                            {new Date(announcement.createdDate).toLocaleDateString('es-ES')}
+                            No hay anuncios disponibles
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} style={{
-                          padding: '3rem 1.5rem',
-                          textAlign: 'center',
-                          fontSize: '0.9rem',
-                          color: '#9ca3af'
-                        }}>
-                          No hay anuncios disponibles
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Form Section */}
+            {(!isMobile || selectedAnnouncement) ? (
             <div>
               <div style={{
                 backgroundColor: 'white',
@@ -970,6 +1049,7 @@ const AnnouncementsAdmin: React.FC = () => {
                 {/* Botones */}
                 <div style={{
                   display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
                   gap: '0.75rem',
                   marginTop: '1rem',
                   paddingTop: '1rem',
@@ -1041,6 +1121,30 @@ const AnnouncementsAdmin: React.FC = () => {
                 </div>
               </div>
             </div>
+            ) : (
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+              }}>
+                <h3 style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: '#149D52',
+                  margin: '0 0 0.5rem 0'
+                }}>
+                  Editar anuncio
+                </h3>
+                <p style={{
+                  margin: 0,
+                  fontSize: '0.85rem',
+                  color: '#6b7280'
+                }}>
+                  Selecciona un anuncio de la tabla para ver y editar sus datos.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1062,9 +1166,9 @@ const AnnouncementsAdmin: React.FC = () => {
           <div style={{
             backgroundColor: 'white',
             borderRadius: '0.75rem',
-            padding: '2rem',
+            padding: isMobile ? '1rem' : '2rem',
             maxWidth: '600px',
-            width: '90%',
+            width: isMobile ? '95%' : '90%',
             maxHeight: '90vh',
             overflowY: 'auto',
             boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)',
@@ -1329,6 +1433,7 @@ const AnnouncementsAdmin: React.FC = () => {
 
               <div style={{
                 display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
                 gap: '1rem',
                 marginTop: '1.5rem'
               }}>
