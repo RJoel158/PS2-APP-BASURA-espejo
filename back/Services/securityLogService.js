@@ -97,8 +97,24 @@ export const upsertConfigValue = async ({ key, value, updatedBy = null }) => {
 export const getSuspiciousActivity = async ({ limit = 100, offset = 0 }) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, user_id, ip_address, event_type, details, severity, created_at
-       FROM suspicious_activity_logs
+      `SELECT
+         s.id,
+         s.user_id,
+         COALESCE(
+           NULLIF(TRIM(CONCAT(p.firstname, ' ', p.lastname)), ''),
+           NULLIF(TRIM(i.companyName), ''),
+           u.email,
+           'Anónimo'
+         ) AS user_name,
+         s.ip_address,
+         s.event_type,
+         s.details,
+         s.severity,
+         s.created_at
+       FROM suspicious_activity_logs s
+       LEFT JOIN users u ON u.id = s.user_id
+       LEFT JOIN person p ON p.userId = u.id
+       LEFT JOIN institution i ON i.userId = u.id
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
@@ -110,11 +126,96 @@ export const getSuspiciousActivity = async ({ limit = 100, offset = 0 }) => {
   }
 };
 
+export const getSuspiciousActivityGrouped = async ({ limit = 100, offset = 0 }) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT
+         DATE(s.created_at) AS activity_date,
+         s.user_id,
+         COALESCE(
+           NULLIF(TRIM(CONCAT(p.firstname, ' ', p.lastname)), ''),
+           NULLIF(TRIM(i.companyName), ''),
+           u.email,
+           'Anónimo'
+         ) AS user_name,
+         s.ip_address,
+         COUNT(*) AS violation_count,
+         MAX(s.created_at) AS last_event_at,
+         GROUP_CONCAT(DISTINCT s.event_type ORDER BY s.event_type SEPARATOR ', ') AS event_types
+       FROM suspicious_activity_logs s
+       LEFT JOIN users u ON u.id = s.user_id
+       LEFT JOIN person p ON p.userId = u.id
+       LEFT JOIN institution i ON i.userId = u.id
+       GROUP BY DATE(s.created_at), s.user_id, s.ip_address
+       ORDER BY last_event_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
+};
+
+export const getSuspiciousActivityDetails = async ({ activityDate, userId = null, ipAddress = null, limit = 100, offset = 0 }) => {
+  try {
+    const conditions = ['DATE(created_at) = ?'];
+    const params = [activityDate];
+
+    if (userId === null || userId === undefined || userId === '') {
+      conditions.push('user_id IS NULL');
+    } else {
+      conditions.push('user_id = ?');
+      params.push(Number(userId));
+    }
+
+    if (ipAddress === null || ipAddress === undefined || ipAddress === '') {
+      conditions.push('ip_address IS NULL');
+    } else {
+      conditions.push('ip_address = ?');
+      params.push(String(ipAddress));
+    }
+
+    params.push(limit, offset);
+
+    const [rows] = await db.query(
+      `SELECT id, user_id, ip_address, event_type, details, severity, created_at
+       FROM suspicious_activity_logs
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      params
+    );
+
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
+};
+
 export const getAuditLog = async ({ limit = 100, offset = 0 }) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, actor_id, action, target_table, target_id, details, created_at
-       FROM audit_log
+      `SELECT
+         a.id,
+         a.actor_id,
+         COALESCE(
+           NULLIF(TRIM(CONCAT(p.firstname, ' ', p.lastname)), ''),
+           NULLIF(TRIM(i.companyName), ''),
+           u.email,
+           'Sistema'
+         ) AS actor_name,
+         a.action,
+         a.target_table,
+         a.target_id,
+         a.details,
+         a.created_at
+       FROM audit_log a
+       LEFT JOIN users u ON u.id = a.actor_id
+       LEFT JOIN person p ON p.userId = u.id
+       LEFT JOIN institution i ON i.userId = u.id
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]

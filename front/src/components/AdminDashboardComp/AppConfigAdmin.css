@@ -25,9 +25,55 @@
 }
 
 .app-config-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.app-config-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.app-config-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.app-config-card h3 {
+  font-size: 0.95rem;
+  color: #15803d;
+}
+
+.app-config-card p {
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.app-config-card input,
+.app-config-card select,
+.app-config-card button {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.app-config-card button {
+  background: #16a34a;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .app-config-form input,
@@ -41,7 +87,6 @@
 
 .app-config-form textarea {
   min-height: 92px;
-  grid-column: 1 / -1;
   resize: vertical;
 }
 
@@ -107,7 +152,7 @@
     padding: 0.75rem;
   }
 
-  .app-config-form {
+  .app-config-cards {
     grid-template-columns: 1fr;
   }
 }

@@ -268,6 +268,8 @@ router.get('/health', (req, res) => {
 router.get('/security/config', requireAuth, requireAdmin, securityController.listAppConfig);
 router.get('/security/config/:key', requireAuth, requireAdmin, securityController.getAppConfig);
 router.put('/security/config/:key', requireAuth, requireAdmin, securityController.upsertAppConfig);
+router.get('/security/suspicious-activity/grouped', requireAuth, requireAdmin, securityController.listSuspiciousActivityGrouped);
+router.get('/security/suspicious-activity/details', requireAuth, requireAdmin, securityController.listSuspiciousActivityDetails);
 router.get('/security/suspicious-activity', requireAuth, requireAdmin, securityController.listSuspiciousActivity);
 router.get('/security/audit-log', requireAuth, requireAdmin, securityController.listAudit);
 router.get('/security/blacklist', requireAuth, requireAdmin, securityController.listBlacklist);

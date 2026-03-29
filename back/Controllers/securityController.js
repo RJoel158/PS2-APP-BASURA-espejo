@@ -6,6 +6,8 @@ import {
   listConfigValues,
   getConfigValue,
   getSuspiciousActivity,
+  getSuspiciousActivityDetails,
+  getSuspiciousActivityGrouped,
   logAuditAction,
   upsertConfigValue
 } from '../Services/securityLogService.js';
@@ -85,6 +87,50 @@ export const listSuspiciousActivity = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: 'Error al obtener actividad sospechosa' });
+  }
+};
+
+export const listSuspiciousActivityGrouped = async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit, 50, 200);
+    const offset = parseOffset(req.query.offset);
+    const rows = await getSuspiciousActivityGrouped({ limit, offset });
+
+    return res.json({
+      success: true,
+      data: rows,
+      meta: { limit, offset, total: rows.length }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al obtener actividad sospechosa agrupada' });
+  }
+};
+
+export const listSuspiciousActivityDetails = async (req, res) => {
+  try {
+    const { activityDate, userId = null, ipAddress = null } = req.query;
+    if (!activityDate) {
+      return res.status(400).json({ success: false, error: 'activityDate es requerido' });
+    }
+
+    const limit = parseLimit(req.query.limit, 100, 300);
+    const offset = parseOffset(req.query.offset);
+
+    const rows = await getSuspiciousActivityDetails({
+      activityDate,
+      userId,
+      ipAddress,
+      limit,
+      offset
+    });
+
+    return res.json({
+      success: true,
+      data: rows,
+      meta: { limit, offset, total: rows.length }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al obtener detalle de actividad sospechosa' });
   }
 };
 

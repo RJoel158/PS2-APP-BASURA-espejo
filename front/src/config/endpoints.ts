@@ -190,6 +190,8 @@ export const API_ENDPOINTS = {
   SECURITY: {
     CONFIG_LIST: '/api/security/config',
     CONFIG_BY_KEY: (key: string) => `/api/security/config/${encodeURIComponent(key)}`,
+    SUSPICIOUS_ACTIVITY_GROUPED: '/api/security/suspicious-activity/grouped',
+    SUSPICIOUS_ACTIVITY_DETAILS: '/api/security/suspicious-activity/details',
     SUSPICIOUS_ACTIVITY: '/api/security/suspicious-activity',
     AUDIT_LOG: '/api/security/audit-log',
     BLACKLIST_LIST: '/api/security/blacklist',

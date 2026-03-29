@@ -6,8 +6,11 @@ import {
   getAuditLog,
   getBlacklist,
   getSuspiciousActivity,
+  getSuspiciousActivityDetails,
+  getSuspiciousActivityGrouped,
   type AuditLogRow,
   type BlacklistRow,
+  type SuspiciousActivityGroupRow,
   type SuspiciousActivityRow
 } from '../../services/securityService';
 import './SecurityAdmin.css';
@@ -38,8 +41,10 @@ export default function SecurityAdmin() {
   const [error, setError] = useState<string | null>(null);
 
   const [blacklistRows, setBlacklistRows] = useState<BlacklistRow[]>([]);
-  const [subjectType, setSubjectType] = useState<'ip' | 'user'>('ip');
-  const [subjectValue, setSubjectValue] = useState('');
+  const [groupedRows, setGroupedRows] = useState<SuspiciousActivityGroupRow[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<SuspiciousActivityGroupRow | null>(null);
+  const [groupDetails, setGroupDetails] = useState<SuspiciousActivityRow[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [blacklistReason, setBlacklistReason] = useState('');
   const [isPermanent, setIsPermanent] = useState(true);
   const [expiresAt, setExpiresAt] = useState('');
@@ -51,12 +56,14 @@ export default function SecurityAdmin() {
     setLoading(true);
     setError(null);
     try {
-      const [blacklist, suspicious, audit] = await Promise.all([
+      const [blacklist, grouped, suspicious, audit] = await Promise.all([
         getBlacklist(),
+        getSuspiciousActivityGrouped(),
         getSuspiciousActivity(),
         getAuditLog()
       ]);
       setBlacklistRows(blacklist);
+      setGroupedRows(grouped);
       setSuspiciousRows(suspicious);
       setAuditRows(audit);
     } catch (err: any) {
@@ -80,6 +87,16 @@ export default function SecurityAdmin() {
     );
   }, [blacklistRows, searchQuery]);
 
+  const filteredGroupedRows = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return groupedRows;
+    return groupedRows.filter(row =>
+      String(row.user_name || '').toLowerCase().includes(q) ||
+      String(row.ip_address || '').toLowerCase().includes(q) ||
+      String(row.activity_date || '').toLowerCase().includes(q)
+    );
+  }, [groupedRows, searchQuery]);
+
   const filteredSuspicious = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return suspiciousRows;
@@ -96,13 +113,32 @@ export default function SecurityAdmin() {
     return auditRows.filter(row =>
       row.action.toLowerCase().includes(q) ||
       String(row.target_table || '').toLowerCase().includes(q) ||
-      String(row.actor_id || '').includes(q)
+      String(row.actor_name || '').toLowerCase().includes(q)
     );
   }, [auditRows, searchQuery]);
 
-  const handleAddBlacklist = async () => {
-    if (!subjectValue.trim()) {
-      setError('subjectValue es requerido');
+  const handleLoadDetails = async (group: SuspiciousActivityGroupRow) => {
+    setSelectedGroup(group);
+    setDetailsLoading(true);
+    setError(null);
+    try {
+      const details = await getSuspiciousActivityDetails({
+        activityDate: group.activity_date,
+        userId: group.user_id,
+        ipAddress: group.ip_address
+      });
+      setGroupDetails(details);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudo cargar el detalle de violaciones');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const handleBanByGroupIp = async (group: SuspiciousActivityGroupRow) => {
+    const ipToBan = (group.ip_address || '').trim();
+    if (!ipToBan) {
+      setError('No se encontró una IP para este grupo de violaciones');
       return;
     }
 
@@ -115,13 +151,12 @@ export default function SecurityAdmin() {
     setError(null);
     try {
       await addBlacklist({
-        subjectType,
-        subjectValue: subjectValue.trim(),
+        subjectType: 'ip',
+        subjectValue: ipToBan,
         isPermanent,
         expiresAt: isPermanent ? null : new Date(expiresAt).toISOString().slice(0, 19).replace('T', ' '),
-        reason: blacklistReason.trim() || null
+        reason: blacklistReason.trim() || `Ban por ${group.violation_count} violaciones detectadas`
       });
-      setSubjectValue('');
       setBlacklistReason('');
       setExpiresAt('');
       await loadAll();
@@ -168,17 +203,46 @@ export default function SecurityAdmin() {
 
         {activeTab === 'blacklist' && (
           <section className="security-section">
+            <div className="security-alert security-alert-info">
+              Flujo recomendado: revisa grupos de violaciones, abre detalle y aplica ban por IP directo.
+            </div>
+
+            <div className="security-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>IP</th>
+                    <th>Violaciones</th>
+                    <th>Tipos de evento</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGroupedRows.map((row, index) => (
+                    <tr key={`${row.activity_date}-${row.user_id ?? 'anon'}-${row.ip_address ?? 'noip'}-${index}`}>
+                      <td>{formatDate(row.activity_date)}</td>
+                      <td>{row.user_name || 'Anónimo'}</td>
+                      <td>{row.ip_address || '-'}</td>
+                      <td>{row.violation_count}</td>
+                      <td>{row.event_types || '-'}</td>
+                      <td className="security-actions-cell">
+                        <button onClick={() => handleLoadDetails(row)}>Ver detalle</button>
+                        <button onClick={() => handleBanByGroupIp(row)} disabled={!row.ip_address}>Ban IP</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredGroupedRows.length === 0 && (
+                    <tr><td colSpan={6}>Sin grupos de violaciones para mostrar</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
             <div className="security-form-grid security-form-grid-4">
-              <select value={subjectType} onChange={(e) => setSubjectType(e.target.value as 'ip' | 'user')}>
-                <option value="ip">IP</option>
-                <option value="user">User ID</option>
-              </select>
-              <input
-                type="text"
-                value={subjectValue}
-                onChange={(e) => setSubjectValue(e.target.value)}
-                placeholder={subjectType === 'ip' ? 'Ej: 127.0.0.1' : 'Ej: 211'}
-              />
+              <input type="text" value={selectedGroup?.ip_address || ''} readOnly placeholder="Selecciona un grupo para banear IP" />
+              <input type="text" value={selectedGroup?.user_name || ''} readOnly placeholder="Usuario del grupo" />
               <input
                 type="text"
                 value={blacklistReason}
@@ -196,7 +260,43 @@ export default function SecurityAdmin() {
                   onChange={(e) => setExpiresAt(e.target.value)}
                 />
               )}
-              <button onClick={handleAddBlacklist}>Agregar/Actualizar bloqueo</button>
+            </div>
+
+            {selectedGroup && (
+              <div className="security-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Severidad</th>
+                      <th>Evento</th>
+                      <th>Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detailsLoading && (
+                      <tr><td colSpan={4}>Cargando detalle...</td></tr>
+                    )}
+                    {!detailsLoading && groupDetails.map((row) => (
+                      <tr key={row.id}>
+                        <td>{formatDate(row.created_at)}</td>
+                        <td>{row.severity}</td>
+                        <td>{row.event_type}</td>
+                        <td><pre>{toPrettyJson(row.details) || '-'}</pre></td>
+                      </tr>
+                    ))}
+                    {!detailsLoading && groupDetails.length === 0 && (
+                      <tr><td colSpan={4}>Este grupo no tiene eventos detallados</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="security-form-grid security-form-grid-4">
+              <div className="security-alert security-alert-info" style={{ gridColumn: '1 / -1' }}>
+                Blacklist activa: visualiza aquí los bloqueos actuales y desactiva cuando corresponda.
+              </div>
             </div>
 
             <div className="security-table-wrap">
@@ -248,7 +348,7 @@ export default function SecurityAdmin() {
                     <th>Fecha</th>
                     <th>Severidad</th>
                     <th>Evento</th>
-                    <th>User ID</th>
+                    <th>Usuario</th>
                     <th>IP</th>
                     <th>Detalle</th>
                   </tr>
@@ -259,7 +359,7 @@ export default function SecurityAdmin() {
                       <td>{formatDate(row.created_at)}</td>
                       <td>{row.severity}</td>
                       <td>{row.event_type}</td>
-                      <td>{row.user_id ?? '-'}</td>
+                      <td>{row.user_name || 'Anónimo'}</td>
                       <td>{row.ip_address || '-'}</td>
                       <td><pre>{toPrettyJson(row.details) || '-'}</pre></td>
                     </tr>
@@ -283,7 +383,6 @@ export default function SecurityAdmin() {
                     <th>Actor</th>
                     <th>Acción</th>
                     <th>Tabla</th>
-                    <th>Target ID</th>
                     <th>Detalle</th>
                   </tr>
                 </thead>
@@ -291,15 +390,14 @@ export default function SecurityAdmin() {
                   {filteredAudit.map((row) => (
                     <tr key={row.id}>
                       <td>{formatDate(row.created_at)}</td>
-                      <td>{row.actor_id ?? '-'}</td>
+                      <td>{row.actor_name || 'Sistema'}</td>
                       <td>{row.action}</td>
                       <td>{row.target_table || '-'}</td>
-                      <td>{row.target_id ?? '-'}</td>
                       <td><pre>{toPrettyJson(row.details) || '-'}</pre></td>
                     </tr>
                   ))}
                   {filteredAudit.length === 0 && (
-                    <tr><td colSpan={6}>Sin eventos en auditoría</td></tr>
+                    <tr><td colSpan={5}>Sin eventos en auditoría</td></tr>
                   )}
                 </tbody>
               </table>

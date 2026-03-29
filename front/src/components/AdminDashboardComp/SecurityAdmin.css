@@ -96,6 +96,26 @@
   cursor: pointer;
 }
 
+.security-actions-cell {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.security-actions-cell button {
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.security-actions-cell button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .checkbox-line {
   display: flex;
   align-items: center;
