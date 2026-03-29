@@ -24,6 +24,7 @@ import MiniMapPreview from "./MiniMapPreview";
 import { REQUEST_STATE } from '../../shared/constants';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
+import { getClockConfig } from '../../services/appConfigService';
 
 interface Material {
   id: number;
@@ -70,6 +71,11 @@ const FormComp: React.FC = () => {
   // Estados para el mapa - ahora con dirección
   const [showMap, setShowMap] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+
+  // Estados para horarios permitidos del sistema
+  const [allowedStartHour, setAllowedStartHour] = useState('08:00');
+  const [allowedEndHour, setAllowedEndHour] = useState('18:00');
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
 
   const days = [
     { key: 'lun', label: 'Lun' },
@@ -182,6 +188,26 @@ const FormComp: React.FC = () => {
     };
   }, [photoPreviewUrls]);
 
+  // Cargar horarios permitidos del sistema
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      try {
+        setLoadingSchedule(true);
+        const config = await getClockConfig();
+        setAllowedStartHour(config.startHour);
+        setAllowedEndHour(config.endHour);
+        console.log('[FormComp] Horarios del sistema cargados:', config);
+      } catch (error) {
+        console.error('[FormComp] Error al cargar horarios del sistema:', error);
+        // Usan valores por defecto si hay error
+      } finally {
+        setLoadingSchedule(false);
+      }
+    };
+
+    fetchSchedule();
+  }, []);
+
   const retryLoadMaterials = () => {
     setLoading(true);
     setApiError(null);
@@ -275,6 +301,7 @@ const FormComp: React.FC = () => {
   };
 
   // Contrato API: timeFrom y timeTo (formato HH:MM, timeFrom < timeTo)
+  // Se valida que estén dentro de los horarios permitidos del sistema
   const handleTimeChange = (field: 'timeFrom' | 'timeTo', value: string) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -399,53 +426,56 @@ const FormComp: React.FC = () => {
     window.history.back();
   };
 
-  /**
-   * Validaciones específicas para el contrato API /api/request
-   * Retorna array de errores si hay alguno
-   */
   const validateAPIContract = (): string[] => {
     const errors: string[] = [];
 
     // Material: debe ser seleccionado
     if (formData.materialId === 0) {
-      errors.push("materialId es requerido");
+      errors.push("Debes seleccionar el material que deseas reciclar");
     }
 
     // Description: max 150 chars, debe estar presente
     if (!formData.description.trim()) {
-      errors.push("description es requerida");
+      errors.push("Debes escribir una descripción del material");
     } else if (formData.description.length > 150) {
-      errors.push("description no puede exceder 150 caracteres");
+      errors.push("La descripción no puede exceder 150 caracteres");
     }
 
     // Photos: 1-5 files requeridos
     if (formData.photos.length === 0) {
-      errors.push("Se requiere al menos 1 foto");
+      errors.push("Debes subir al menos 1 foto del material");
     } else if (formData.photos.length > 5) {
       errors.push("Máximo 5 fotos permitidas");
     }
 
     // Available Days: array no vacío
     if (formData.availableDays.length === 0) {
-      errors.push("availableDays es requerido (selecciona al menos 1 día)");
+      errors.push("Debes seleccionar al menos 1 día disponible");
     }
 
     // Time Range: ambos campos y validación HH:MM
     if (!formData.timeFrom) {
-      errors.push("timeFrom es requerido (formato HH:MM)");
+      errors.push("Debes seleccionar la hora de inicio");
     }
     if (!formData.timeTo) {
-      errors.push("timeTo es requerido (formato HH:MM)");
+      errors.push("Debes seleccionar la hora de finalización");
     }
     if (formData.timeFrom && formData.timeTo) {
       if (formData.timeFrom >= formData.timeTo) {
-        errors.push("timeFrom debe ser menor que timeTo");
+        errors.push("La hora de inicio debe ser anterior a la hora de finalización");
+      }
+      // Validar que estén dentro del rango permitido
+      if (formData.timeFrom < allowedStartHour) {
+        errors.push(`La hora de inicio no puede ser antes de ${allowedStartHour}`);
+      }
+      if (formData.timeTo > allowedEndHour) {
+        errors.push(`La hora de finalización no puede ser después de ${allowedEndHour}`);
       }
     }
 
     // Location: latitude y longitude requeridos
     if (!selectedLocation) {
-      errors.push("selectedLocation es requerida (latitude, longitude)");
+      errors.push("Debes seleccionar la ubicación donde pueden recoger el material");
     }
 
     return errors;
@@ -491,7 +521,7 @@ const FormComp: React.FC = () => {
     const validationErrors = validateAPIContract();
     if (validationErrors.length > 0) {
       const errorMessage = validationErrors.join("\n• ");
-      setMensaje(`Errores de validación:\n• ${errorMessage}`);
+      setMensaje(`• ${errorMessage}`);
       return;
     }
 
@@ -770,7 +800,9 @@ const FormComp: React.FC = () => {
                     id="time-from"
                     type="time" 
                     value={formData.timeFrom} 
-                    onChange={(e) => handleTimeChange('timeFrom', e.target.value)} 
+                    onChange={(e) => handleTimeChange('timeFrom', e.target.value)}
+                    min={allowedStartHour}
+                    max={allowedEndHour}
                     className="time-input" 
                   />
                 </div>
@@ -780,7 +812,9 @@ const FormComp: React.FC = () => {
                     id="time-to"
                     type="time" 
                     value={formData.timeTo} 
-                    onChange={(e) => handleTimeChange('timeTo', e.target.value)} 
+                    onChange={(e) => handleTimeChange('timeTo', e.target.value)}
+                    min={allowedStartHour}
+                    max={allowedEndHour}
                     className="time-input" 
                   />
                 </div>

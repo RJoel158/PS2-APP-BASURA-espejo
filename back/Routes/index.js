@@ -43,6 +43,7 @@ import rankingController from '../Controllers/rankingController.js';
 import * as reportController from '../Controllers/reportController.js';
 import * as requestReportController from '../Controllers/requestReportController.js';
 import * as userMaterialController from '../Controllers/userMaterialController.js';
+import appConfigRoutes from './appConfigRoutes.js';
 
 // Configuración de multer para uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -247,5 +248,10 @@ router.get('/health', (req, res) => {
     uptime: process.uptime()
   });
 });
+
+// ==========================================
+// APP CONFIG (2 rutas)
+// ==========================================
+router.use('/app-config', appConfigRoutes);
 
 export default router;

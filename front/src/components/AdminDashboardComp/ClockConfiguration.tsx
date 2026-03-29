@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './ClockConfiguration.css';
+import { getClockConfig, saveClockConfig } from '../../services/appConfigService';
 
 // Convierte HH:mm a minutos desde las 00:00 para simplificar calculos.
 function timeToMinutes(time: string): number {
@@ -61,6 +62,9 @@ export default function ClockConfiguration() {
   const [draftEndTime, setDraftEndTime] = useState(endTime);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nowMinutes, setNowMinutes] = useState(getCurrentMinutesOfDay());
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     // Refresca cada minuto para que el aro avance automaticamente.
@@ -71,6 +75,25 @@ export default function ClockConfiguration() {
     return () => {
       window.clearInterval(intervalId);
     };
+  }, []);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        setLoadingConfig(true);
+        setSaveError('');
+        const config = await getClockConfig();
+        setStartTime(config.startHour);
+        setEndTime(config.endHour);
+      } catch (error) {
+        console.error('[ClockConfiguration] Error al cargar configuracion:', error);
+        setSaveError('No se pudo cargar la configuracion guardada. Se usaran valores por defecto.');
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+
+    loadConfig();
   }, []);
 
   const elapsedRatio = useMemo(
@@ -99,14 +122,35 @@ export default function ClockConfiguration() {
     setIsModalOpen(false);
   };
 
-  const applyHours = () => {
+  const applyHours = async () => {
     if (isInvalidRange) {
       return;
     }
 
-    setStartTime(draftStartTime);
-    setEndTime(draftEndTime);
-    setIsModalOpen(false);
+    try {
+      setSavingConfig(true);
+      setSaveError('');
+
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const updatedBy = Number(user?.id);
+
+      if (!Number.isInteger(updatedBy) || updatedBy <= 0) {
+        setSaveError('No se pudo identificar al usuario administrador.');
+        return;
+      }
+
+      await saveClockConfig(draftStartTime, draftEndTime, updatedBy);
+
+      setStartTime(draftStartTime);
+      setEndTime(draftEndTime);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('[ClockConfiguration] Error al guardar configuracion:', error);
+      setSaveError('No se pudo guardar la configuracion de horarios.');
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   return (
@@ -115,6 +159,8 @@ export default function ClockConfiguration() {
         <div className="card-header clock-config-header">
           <div>
             <h2 className="card-title">Horario de reciclaje</h2>
+            {loadingConfig && <p>Cargando configuracion...</p>}
+            {saveError && <p className="clock-modal-error">{saveError}</p>}
           </div>
         </div>
 
@@ -202,9 +248,9 @@ export default function ClockConfiguration() {
                 className="clock-config-button"
                 type="button"
                 onClick={applyHours}
-                disabled={isInvalidRange}
+                disabled={isInvalidRange || savingConfig}
               >
-                Aplicar horario
+                {savingConfig ? 'Guardando...' : 'Aplicar horario'}
               </button>
             </div>
           </div>
