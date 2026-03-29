@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '../config/endpoints';
 
 export interface AppConfigEntry {
   config_key: string;
-  config_value: string;
+  config_value: unknown;
   updated_by: number;
   updated_at: string;
 }
@@ -13,7 +13,7 @@ export interface ClockConfig {
   endHour: string;
 }
 
-const normalizeClockValue = (value: string | undefined, fallback: string) => {
+const normalizeClockValue = (value: unknown, fallback: string) => {
   if (!value || typeof value !== 'string') {
     return fallback;
   }
@@ -76,4 +76,26 @@ export const saveClockConfig = async (
     saveAppConfig('start_hour', startHour, updatedBy),
     saveAppConfig('end_hour', endHour, updatedBy),
   ]);
+};
+
+export const getRankingDecreaseConfig = async (fallback = 10): Promise<number> => {
+  const config = await getAppConfigByKey('ranking_decrease');
+  const rawValue = config?.config_value;
+
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  if (parsed < 0) return 0;
+  if (parsed > 100) return 100;
+  return parsed;
+};
+
+export const saveRankingDecreaseConfig = async (
+  percent: number,
+  updatedBy: number
+): Promise<void> => {
+  const normalizedPercent = Math.min(100, Math.max(0, Math.round(percent)));
+  await saveAppConfig('ranking_decrease', String(normalizedPercent), updatedBy);
 };

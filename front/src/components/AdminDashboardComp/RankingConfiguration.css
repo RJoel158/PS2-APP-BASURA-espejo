@@ -99,6 +99,13 @@
   padding-top: 0;
 }
 
+.ranking-config__inline-msg {
+  display: block;
+  margin-top: 0.45rem;
+  color: #2f6f52;
+  font-size: 0.88rem;
+}
+
 @media (max-width: 576px) {
   .ranking-config__content-box {
     padding: 0.85rem;

@@ -91,7 +91,10 @@ const RankingPeriodsAdmin: React.FC = () => {
         recicladores: res.data.recicladores || [],
         recolectores: res.data.recolectores || []
       });
+      setError(null);
     } catch (err) {
+      const message = (err as any)?.response?.data?.error || 'Error al cargar ranking en vivo';
+      setError(message);
       setRanking({ recicladores: [], recolectores: [] });
     } finally {
       setLoadingRanking(false);
@@ -107,7 +110,10 @@ const RankingPeriodsAdmin: React.FC = () => {
       const recicladores = res.data.tops.filter((r: any) => r.rol === 'reciclador');
       const recolectores = res.data.tops.filter((r: any) => r.rol === 'recolector');
       setRanking({ recicladores, recolectores });
+      setError(null);
     } catch (err) {
+      const message = (err as any)?.response?.data?.error || 'Error al cargar ranking histórico';
+      setError(message);
       setRanking({ recicladores: [], recolectores: [] });
     } finally {
       setLoadingRanking(false);
@@ -140,11 +146,21 @@ const RankingPeriodsAdmin: React.FC = () => {
     setMensaje('');
     setLoadingRanking(true);
     try {
-      await api.post(API_ENDPOINTS.RANKING.CLOSE_PERIOD, { periodo_id: periodToClose });
+      const closeRes = await api.post(API_ENDPOINTS.RANKING.CLOSE_PERIOD, { periodo_id: periodToClose });
       await fetchPeriods();
-      setMensaje('Periodo cerrado y ranking guardado');
+      if (closeRes?.data?.success) {
+        setMensaje('Periodo cerrado y ranking guardado');
+      } else {
+        setMensaje(closeRes?.data?.message || 'Periodo cerrado sin datos de ranking para mostrar');
+      }
+      if (selectedPeriodId === periodToClose) {
+        await fetchHistoricalRanking(periodToClose);
+      }
+      setError(null);
     } catch (err) {
-      setMensaje('Error al cerrar periodo');
+      const message = (err as any)?.response?.data?.error || 'Error al cerrar periodo';
+      setMensaje(message);
+      setError(message);
     } finally {
       setLoadingRanking(false);
       setPeriodToClose(null);
