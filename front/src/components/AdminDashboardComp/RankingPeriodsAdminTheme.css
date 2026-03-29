@@ -1,0 +1,134 @@
+.ranking-theme-page {
+  background-color: #faf8f1;
+}
+
+.ranking-theme-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-top-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+}
+
+.ranking-top-title {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.ranking-top-table-wrap {
+  border-radius: 0.6rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.ranking-top-table {
+  margin-bottom: 0;
+}
+
+.ranking-top-thead th {
+  background: #ecfdf3 !important;
+  color: #149d52 !important;
+  border-color: #d1fae5 !important;
+  font-weight: 700;
+}
+
+.ranking-top-col-pos {
+  width: 80px;
+  text-align: center;
+}
+
+.ranking-top-col-email {
+  min-width: 220px;
+}
+
+.ranking-top-col-score {
+  width: 100px;
+  text-align: center;
+}
+
+.ranking-top-table tbody tr:hover {
+  background-color: #f6fef9;
+}
+
+.ranking-top-badge {
+  min-width: 30px;
+}
+
+.ranking-top-badge-recycler {
+  background-color: #149d52;
+}
+
+.ranking-top-badge-collector {
+  background-color: #4c7c5b;
+  color: #ffffff;
+}
+
+.ranking-score-badge {
+  background-color: #149d52;
+}
+
+.ranking-top-loading {
+  color: #6b7280;
+}
+
+.ranking-bottom-table-wrap {
+  border-radius: 0.6rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.ranking-bottom-table {
+  min-width: 520px;
+}
+
+.ranking-bottom-thead th {
+  background: #ecfdf3 !important;
+  color: #149d52 !important;
+  border-color: #d1fae5 !important;
+  font-weight: 700;
+}
+
+.ranking-bottom-table tbody tr:hover {
+  background-color: #f6fef9;
+}
+
+.ranking-status-pill {
+  background-color: #d1fae5;
+  color: #166534;
+  font-weight: 700;
+}
+
+.ranking-state-active {
+  background-color: #149d52;
+}
+
+.ranking-state-closed {
+  background-color: #64748b;
+}
+
+.ranking-close-btn {
+  background-color: #149d52;
+  border-color: #149d52;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.ranking-close-btn:hover,
+.ranking-close-btn:focus {
+  background-color: #108643;
+  border-color: #108643;
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .ranking-theme-page {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
