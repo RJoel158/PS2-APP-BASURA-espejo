@@ -92,7 +92,7 @@ const Login: React.FC = () => {
       console.error("Error de conexión:", err);
       
       // Manejar errores HTTP (401, 400, etc.)
-      if (err.response?.status === 401 || err.response?.status === 400) {
+      if (err.response?.status === 401 || err.response?.status === 400 || err.response?.status === 403) {
         const errorMessage = err.response?.data?.error || "Usuario o contraseña incorrectos";
         setMensaje("❌ " + errorMessage);
         setForm((f) => ({ ...f, password: "" })); // resetea la contraseña

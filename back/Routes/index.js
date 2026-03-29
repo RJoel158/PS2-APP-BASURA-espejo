@@ -263,11 +263,15 @@ router.get('/health', (req, res) => {
 });
 
 // ==========================================
-// SEGURIDAD ADMIN (4 rutas)
+// SEGURIDAD ADMIN (8 rutas)
 // ==========================================
+router.get('/security/config', requireAuth, requireAdmin, securityController.listAppConfig);
 router.get('/security/config/:key', requireAuth, requireAdmin, securityController.getAppConfig);
 router.put('/security/config/:key', requireAuth, requireAdmin, securityController.upsertAppConfig);
 router.get('/security/suspicious-activity', requireAuth, requireAdmin, securityController.listSuspiciousActivity);
+router.get('/security/audit-log', requireAuth, requireAdmin, securityController.listAudit);
+router.get('/security/blacklist', requireAuth, requireAdmin, securityController.listBlacklist);
 router.post('/security/blacklist', requireAuth, requireAdmin, securityController.addBlacklist);
+router.patch('/security/blacklist/:id/deactivate', requireAuth, requireAdmin, securityController.deactivateBlacklist);
 
 export default router;

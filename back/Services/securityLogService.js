@@ -47,36 +47,83 @@ export const logAuditAction = async ({
 };
 
 export const getConfigValue = async (key) => {
-  const [rows] = await db.query(
-    `SELECT config_key, config_value, updated_by, updated_at
-     FROM app_config
-     WHERE config_key = ?`,
-    [key]
-  );
-  return rows[0] || null;
+  try {
+    const [rows] = await db.query(
+      `SELECT config_key, config_value, updated_by, updated_at
+       FROM app_config
+       WHERE config_key = ?`,
+      [key]
+    );
+    return rows[0] || null;
+  } catch (error) {
+    warnMissingTables(error);
+    return null;
+  }
+};
+
+export const listConfigValues = async ({ limit = 100, offset = 0 } = {}) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT config_key, config_value, updated_by, updated_at
+       FROM app_config
+       ORDER BY config_key ASC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
 };
 
 export const upsertConfigValue = async ({ key, value, updatedBy = null }) => {
-  await db.query(
-    `INSERT INTO app_config (config_key, config_value, updated_by)
-     VALUES (?, CAST(? AS JSON), ?)
-     ON DUPLICATE KEY UPDATE
-       config_value = CAST(VALUES(config_value) AS JSON),
-       updated_by = VALUES(updated_by),
-       updated_at = CURRENT_TIMESTAMP`,
-    [key, JSON.stringify(value), updatedBy]
-  );
+  try {
+    await db.query(
+      `INSERT INTO app_config (config_key, config_value, updated_by)
+       VALUES (?, CAST(? AS JSON), ?)
+       ON DUPLICATE KEY UPDATE
+         config_value = CAST(VALUES(config_value) AS JSON),
+         updated_by = VALUES(updated_by),
+         updated_at = CURRENT_TIMESTAMP`,
+      [key, JSON.stringify(value), updatedBy]
+    );
+  } catch (error) {
+    warnMissingTables(error);
+    throw error;
+  }
 };
 
 export const getSuspiciousActivity = async ({ limit = 100, offset = 0 }) => {
-  const [rows] = await db.query(
-    `SELECT id, user_id, ip_address, event_type, details, severity, created_at
-     FROM suspicious_activity_logs
-     ORDER BY created_at DESC
-     LIMIT ? OFFSET ?`,
-    [limit, offset]
-  );
-  return rows;
+  try {
+    const [rows] = await db.query(
+      `SELECT id, user_id, ip_address, event_type, details, severity, created_at
+       FROM suspicious_activity_logs
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
+};
+
+export const getAuditLog = async ({ limit = 100, offset = 0 }) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, actor_id, action, target_table, target_id, details, created_at
+       FROM audit_log
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
 };
 
 export const addBlacklistEntry = async ({
@@ -97,6 +144,34 @@ export const addBlacklistEntry = async ({
        created_by = VALUES(created_by),
        created_at = CURRENT_TIMESTAMP`,
     [subjectType, subjectValue, isPermanent ? 1 : 0, expiresAt, reason, createdBy]
+  );
+};
+
+export const getBlacklistEntries = async ({ limit = 100, offset = 0 }) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, subject_type, subject_value, is_permanent, expires_at, reason, created_by, created_at,
+              (is_permanent = 1 OR (expires_at IS NOT NULL AND expires_at > NOW())) AS is_active
+       FROM security_blacklist
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  } catch (error) {
+    warnMissingTables(error);
+    return [];
+  }
+};
+
+export const deactivateBlacklistEntry = async ({ id }) => {
+  await db.query(
+    `UPDATE security_blacklist
+     SET is_permanent = 0,
+         expires_at = NOW(),
+         reason = CONCAT(COALESCE(reason, ''), IF(COALESCE(reason, '') = '', '', ' | '), 'deactivated')
+     WHERE id = ?`,
+    [id]
   );
 };
 

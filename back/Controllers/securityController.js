@@ -1,5 +1,9 @@
 import {
   addBlacklistEntry,
+  deactivateBlacklistEntry,
+  getAuditLog,
+  getBlacklistEntries,
+  listConfigValues,
   getConfigValue,
   getSuspiciousActivity,
   logAuditAction,
@@ -25,6 +29,22 @@ export const getAppConfig = async (req, res) => {
     return res.json({ success: true, data: config });
   } catch (error) {
     return res.status(500).json({ success: false, error: 'Error al obtener configuración' });
+  }
+};
+
+export const listAppConfig = async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit, 100, 300);
+    const offset = parseOffset(req.query.offset);
+    const rows = await listConfigValues({ limit, offset });
+
+    return res.json({
+      success: true,
+      data: rows,
+      meta: { limit, offset, total: rows.length }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al listar configuración' });
   }
 };
 
@@ -99,5 +119,59 @@ export const addBlacklist = async (req, res) => {
     return res.json({ success: true, message: 'Blacklist actualizada' });
   } catch (error) {
     return res.status(500).json({ success: false, error: 'Error al actualizar blacklist' });
+  }
+};
+
+export const listBlacklist = async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit, 100, 300);
+    const offset = parseOffset(req.query.offset);
+    const rows = await getBlacklistEntries({ limit, offset });
+
+    return res.json({
+      success: true,
+      data: rows,
+      meta: { limit, offset, total: rows.length }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al obtener blacklist' });
+  }
+};
+
+export const deactivateBlacklist = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+
+    await deactivateBlacklistEntry({ id });
+    await logAuditAction({
+      actorId: req.user?.id || null,
+      action: 'security_blacklist_deactivate',
+      targetTable: 'security_blacklist',
+      targetId: id,
+      details: null
+    });
+
+    return res.json({ success: true, message: 'Registro de blacklist desactivado' });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al desactivar blacklist' });
+  }
+};
+
+export const listAudit = async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit, 100, 300);
+    const offset = parseOffset(req.query.offset);
+    const rows = await getAuditLog({ limit, offset });
+
+    return res.json({
+      success: true,
+      data: rows,
+      meta: { limit, offset, total: rows.length }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Error al obtener auditoría' });
   }
 };

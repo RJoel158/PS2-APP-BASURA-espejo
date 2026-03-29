@@ -11,6 +11,7 @@ import {
   signRefreshToken,
   verifyRefreshToken
 } from "../shared/auth.js";
+import { isBlacklisted, logSuspiciousActivity } from '../Services/securityLogService.js';
 
 /** GET /users */
 export const getUsers = async (req, res) => {
@@ -94,6 +95,7 @@ export const checkEmailExists = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const requestIp = req.ip || req.socket?.remoteAddress || null;
 
     // Validar con Validator
     const errors = Validator.validateLoginCredentials({ email, password });
@@ -103,10 +105,34 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ success: false, error: Object.values(errors).find(e => e !== "") || "Validación fallida" });
     }
 
+    const blockedByIp = await isBlacklisted({ ip: requestIp });
+    if (blockedByIp) {
+      await logSuspiciousActivity({
+        userId: null,
+        ip: requestIp,
+        eventType: 'blacklisted_ip_login_attempt',
+        details: { email },
+        severity: 'high'
+      });
+      return res.status(403).json({ success: false, error: 'Acceso bloqueado por seguridad' });
+    }
+
     const user = await UserModel.loginUser(email);
     if (!user) {
       console.warn("[WARN] loginUser - user not found", { email });
       return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
+    }
+
+    const blockedByUser = await isBlacklisted({ userId: user.id, ip: requestIp });
+    if (blockedByUser) {
+      await logSuspiciousActivity({
+        userId: user.id,
+        ip: requestIp,
+        eventType: 'blacklisted_user_login_attempt',
+        details: { email },
+        severity: 'high'
+      });
+      return res.status(403).json({ success: false, error: 'Usuario bloqueado por seguridad' });
     }
 
     // Soporta hashes bcrypt y usuarios legacy con contraseña en texto plano.
