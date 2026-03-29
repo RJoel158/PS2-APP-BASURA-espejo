@@ -30,6 +30,13 @@ const resolveApiBaseUrl = (): string => {
       currentHost === '127.0.0.1' ||
       currentHost === '::1';
 
+    // En desarrollo local, evita mezclar localhost y 127.0.0.1 para que
+    // las cookies de sesion se envien de forma consistente en requests XHR.
+    if (isLoopbackTarget && isCurrentHostLoopback && currentHost && parsed.hostname !== currentHost) {
+      parsed.hostname = currentHost;
+      return parsed.toString().replace(/\/+$/, '');
+    }
+
     // En túneles (host público) no se puede llamar a loopback por políticas del navegador.
     if (isLoopbackTarget && !isCurrentHostLoopback) {
       console.warn('[environment] Ignorando VITE_API_BASE_URL loopback en host público. Se usará proxy relativo /api');

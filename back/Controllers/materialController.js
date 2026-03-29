@@ -11,20 +11,24 @@ export const getMaterials = async (req, res) => {
   try {
     console.log("[INFO] getMaterials controller called");
     
-    const { state } = req.query;
-    console.log("[INFO] getMaterials - Query params:", { state });
+    const { state, limit = '50', offset = '0' } = req.query;
+    console.log("[INFO] getMaterials - Query params:", { state, limit, offset });
+
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
     let query = `
       SELECT id, name, description, state, createdDate
       FROM material
     `;
+    let countQuery = `SELECT COUNT(*) as total FROM material`;
     
     const params = [];
+    const countParams = [];
     
-    // Si state es especificado, filtrar por ese estado
-    // Si no es especificado, retornar TODOS (para admin)
+    // Por seguridad, por defecto solo activos. Admin puede pedir state explicitamente.
     if (state !== undefined) {
-      const stateValue = parseInt(state);
+      const stateValue = parseInt(state, 10);
       if (![0, 1].includes(stateValue)) {
         return res.status(400).json({
           success: false,
@@ -32,21 +36,34 @@ export const getMaterials = async (req, res) => {
         });
       }
       query += ` WHERE state = ?`;
+      countQuery += ` WHERE state = ?`;
       params.push(stateValue);
+      countParams.push(stateValue);
       console.log("[INFO] getMaterials - Filtrando por estado:", stateValue);
     } else {
-      console.log("[INFO] getMaterials - Sin filtro de estado, retornando todos");
+      query += ` WHERE state = 1`;
+      countQuery += ` WHERE state = 1`;
+      console.log("[INFO] getMaterials - Sin estado, filtrando activos por defecto");
     }
     
-    query += ` ORDER BY name ASC`;
+    query += ` ORDER BY name ASC LIMIT ? OFFSET ?`;
+    params.push(parsedLimit, parsedOffset);
     
-    const [materials] = await db.query(query, params);
+    const [[{ total }], [materials]] = await Promise.all([
+      db.query(countQuery, countParams),
+      db.query(query, params)
+    ]);
     
     console.log("[INFO] getMaterials controller - materials found:", materials.length);
     
     res.json({
       success: true,
-      data: materials
+      data: materials,
+      meta: {
+        total,
+        limit: parsedLimit,
+        offset: parsedOffset
+      }
     });
   } catch (error) {
     console.error("[ERROR] getMaterials controller:", error);

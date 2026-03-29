@@ -62,8 +62,9 @@ const Login: React.FC = () => {
       // Login exitoso
       if (data.success) {
         setMensaje("✅ Bienvenido, " + data.user.email);
-        //Guardado de sesión
-        localStorage.setItem("user", JSON.stringify(data.user));
+        // Guardado de sesión sin token para reducir exposición en frontend.
+        const { token: _token, ...safeUser } = data.user;
+        localStorage.setItem("user", JSON.stringify(safeUser));
         //Limpieza del formulario y erores
         setForm({ email: "", password: "" });
         setErrors({});

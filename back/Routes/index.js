@@ -43,6 +43,18 @@ import rankingController from '../Controllers/rankingController.js';
 import * as reportController from '../Controllers/reportController.js';
 import * as requestReportController from '../Controllers/requestReportController.js';
 import * as userMaterialController from '../Controllers/userMaterialController.js';
+import * as securityController from '../Controllers/securityController.js';
+import {
+  requireAuth,
+  requireAdmin,
+  requireOwnershipByParam,
+  requireOwnershipByBody
+} from '../shared/auth.js';
+import {
+  loginRateLimiter,
+  forgotPasswordRateLimiter,
+  checkEmailRateLimiter
+} from '../shared/rateLimiter.js';
 
 // Configuración de multer para uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -80,19 +92,21 @@ const router = express.Router();
 // ==========================================
 
 // Auth
-router.post('/users/login', userController.loginUser);
+router.post('/users/login', loginRateLimiter, userController.loginUser);
+router.post('/users/refresh-token', userController.refreshToken);
+router.post('/users/logout', requireAuth, userController.logoutUser);
 
 // Registro
 router.post('/users', userController.createUser);
 router.post('/users/collector', userController.createCollectorUser);
 router.post('/users/institution', userController.createUserWithInstitution);
-router.post('/users/institution-admin', userController.createUserWithInstitutionByAdmin);
+router.post('/users/institution-admin', requireAuth, requireAdmin, userController.createUserWithInstitutionByAdmin);
 
 // Recuperar contraseña
-router.post('/users/forgotpassword', userController.forgotPassword);
+router.post('/users/forgotpassword', forgotPasswordRateLimiter, userController.forgotPassword);
 
 // Cambiar contraseña
-router.put('/users/changePassword/:userId', userController.changePassword);
+router.put('/users/changePassword/:userId', requireAuth, requireOwnershipByParam('userId'), userController.changePassword);
 
 // Gestión de recolectores - ESPECÍFICAS PRIMERO
 router.get('/users/collectors/pending/institution', userController.getCollectorsPendingWithInstitution);
@@ -100,24 +114,24 @@ router.get('/users/collectors/pending', userController.getCollectorsPendingWithP
 
 // Gestión de instituciones - RUTAS CON PATHS FIJOS ANTES QUE CON PARÁMETROS
 router.get('/users/institution', userController.getUsersWithInstitution);
-router.post('/users/institution/approve/:id', userController.approveInstitution);
-router.post('/users/institution/reject/:id', userController.rejectInstitution);
-router.delete('/users/institution/:id', userController.deleteUserWithInstitution);
+router.post('/users/institution/approve/:id', requireAuth, requireAdmin, userController.approveInstitution);
+router.post('/users/institution/reject/:id', requireAuth, requireAdmin, userController.rejectInstitution);
+router.delete('/users/institution/:id', requireAuth, requireAdmin, userController.deleteUserWithInstitution);
 
 // Gestión de usuarios - RUTAS CON PATHS FIJOS ANTES QUE CON PARÁMETROS
 router.get('/users/withPerson', userController.getUsersPerson);
-router.post('/users/approve/:id', userController.approveUser);
-router.post('/users/reject/:id', userController.rejectUser);
+router.post('/users/approve/:id', requireAuth, requireAdmin, userController.approveUser);
+router.post('/users/reject/:id', requireAuth, requireAdmin, userController.rejectUser);
 
 // CRÍTICO: Esta ruta DEBE ir ANTES de /users/:id para que no sea interceptada
 router.get('/users/withInstitution/:id', userController.getUserWithInstitutionById);
 
 // Rutas genéricas con parámetros dinámicos - AL FINAL
-router.get('/users/person/:id', userController.getUsersPerson);
-router.get('/users/check-email/:email', userController.checkEmailExists); 
-router.put('/users/:id/role', userController.updateUserRole);
-router.get('/users/:id', userController.getUserById);
-router.delete('/users/:id', userController.deleteUser);
+router.get('/users/person/:id', requireAuth, requireOwnershipByParam('id'), userController.getUsersPerson);
+router.get('/users/check-email/:email', checkEmailRateLimiter, userController.checkEmailExists); 
+router.put('/users/:id/role', requireAuth, requireAdmin, userController.updateUserRole);
+router.get('/users/:id', requireAuth, requireOwnershipByParam('id'), userController.getUserById);
+router.delete('/users/:id', requireAuth, requireAdmin, userController.deleteUser);
 
 // ==========================================
 // MATERIALES (5 rutas)
@@ -133,35 +147,35 @@ router.delete('/material/:id', materialController.deleteMaterial);
 // ==========================================
 // FAVORITOS DE MATERIALES (4 rutas)
 // ==========================================
-router.get('/user-materials/check/:userId/:materialId', userMaterialController.checkFavoriteMaterial);
-router.get('/user-materials/:userId/matching-requests-count', userMaterialController.getMatchingRequestsCount);
-router.get('/user-materials/:userId', userMaterialController.getUserFavoriteMaterials);
-router.post('/user-materials', userMaterialController.addFavoriteMaterial);
-router.delete('/user-materials/:userId/:materialId', userMaterialController.removeFavoriteMaterial);
+router.get('/user-materials/check/:userId/:materialId', requireAuth, requireOwnershipByParam('userId'), userMaterialController.checkFavoriteMaterial);
+router.get('/user-materials/:userId/matching-requests-count', requireAuth, requireOwnershipByParam('userId'), userMaterialController.getMatchingRequestsCount);
+router.get('/user-materials/:userId', requireAuth, requireOwnershipByParam('userId'), userMaterialController.getUserFavoriteMaterials);
+router.post('/user-materials', requireAuth, requireOwnershipByBody('userId'), userMaterialController.addFavoriteMaterial);
+router.delete('/user-materials/:userId/:materialId', requireAuth, requireOwnershipByParam('userId'), userMaterialController.removeFavoriteMaterial);
 
 // ==========================================
 // SOLICITUDES (7 rutas)
 // ==========================================
 // Rutas específicas PRIMERO
-router.get('/request/user/:userId/state', requestController.getRequestsByUserAndState);
+router.get('/request/user/:userId/state', requireAuth, requireOwnershipByParam('userId'), requestController.getRequestsByUserAndState);
 router.post('/request/:id/schedule', appointmentController.createNewAppointment);
 router.get('/request/:id/schedule', requestController.getRequestWithSchedule);
 router.put('/request/:id/state', requestController.updateRequestState);
 router.get('/request/:id', requestController.getRequestById);
 // Rutas genéricas DESPUÉS
-router.post('/request', requestController.upload.array('photos'), requestController.createRequest);
+router.post('/request', requireAuth, requestController.upload.array('photos'), requireOwnershipByBody('idUser'), requestController.createRequest);
 router.get('/request', requestController.getAllRequests);
 
 // ==========================================
 // CITAS (12 rutas)
 // ==========================================
 // Rutas específicas PRIMERO
-router.post('/appointments/schedule', appointmentController.createNewAppointment);
-router.get('/appointments/collector/:collectorId', appointmentController.getAppointmentsByCollector);
-router.get('/appointments/recycler/:recyclerId', appointmentController.getAppointmentsByRecycler);
+router.post('/appointments/schedule', requireAuth, requireOwnershipByBody('collectorId'), appointmentController.createNewAppointment);
+router.get('/appointments/collector/:collectorId', requireAuth, requireOwnershipByParam('collectorId'), appointmentController.getAppointmentsByCollector);
+router.get('/appointments/recycler/:recyclerId', requireAuth, requireOwnershipByParam('recyclerId'), appointmentController.getAppointmentsByRecycler);
 router.put('/appointments/:id/accept', appointmentController.acceptAppointmentEndpoint);
 router.put('/appointments/:id/reject', appointmentController.rejectAppointmentEndpoint);
-router.put('/appointments/:id/cancel', appointmentController.cancelAppointment);
+router.put('/appointments/:id/cancel', requireAuth, requireOwnershipByBody('userId'), appointmentController.cancelAppointment);
 router.put('/appointments/:id/complete', appointmentController.completeAppointmentEndpoint);
 // Rutas genéricas DESPUÉS
 router.get('/appointments/:id', appointmentController.getAppointmentById);
@@ -172,18 +186,18 @@ router.get('/appointments', appointmentController.getAppointments);
 // ==========================================
 // NOTIFICACIONES (3 rutas)
 // ==========================================
-router.get('/notifications/user/:userId', notificationController.getUserNotifications);
-router.get('/notifications/unread/:userId', notificationController.getUnreadCount);
-router.put('/notifications/read', notificationController.markNotificationAsRead);
+router.get('/notifications/user/:userId', requireAuth, requireOwnershipByParam('userId'), notificationController.getUserNotifications);
+router.get('/notifications/unread/:userId', requireAuth, requireOwnershipByParam('userId'), notificationController.getUnreadCount);
+router.put('/notifications/read', requireAuth, requireOwnershipByBody('userId'), notificationController.markNotificationAsRead);
 
 // ==========================================
 // PUNTUACIONES (4 rutas)
 // ==========================================
-router.post('/score', scoreController.createScore);
-router.get('/score/check/:appointmentId/:userId', scoreController.checkUserRated);
-router.get('/score/appointment/:appointmentId', scoreController.getAppointmentScores);
-router.get('/score/user/:userId/total', scoreController.getUserTotalScore);
-router.get('/score/user/:userId/average', scoreController.getUserAverageRating);
+router.post('/score', requireAuth, requireOwnershipByBody('ratedByUserId'), scoreController.createScore);
+router.get('/score/check/:appointmentId/:userId', requireAuth, requireOwnershipByParam('userId'), scoreController.checkUserRated);
+router.get('/score/appointment/:appointmentId', requireAuth, scoreController.getAppointmentScores);
+router.get('/score/user/:userId/total', requireAuth, requireOwnershipByParam('userId'), scoreController.getUserTotalScore);
+router.get('/score/user/:userId/average', requireAuth, requireOwnershipByParam('userId'), scoreController.getUserAverageRating);
 
 // ==========================================
 // ANUNCIOS (6 rutas)
@@ -221,21 +235,21 @@ router.post('/ranking/periods', rankingController.createPeriod);
 // ==========================================
 // REPORTES (3 rutas)
 // ==========================================
-router.get('/reports/materiales', reportController.getMaterialesReport);
-router.get('/reports/scores', reportController.getScoresReport);
-router.get('/reports/recolecciones', reportController.getRecolectionsReport);
+router.get('/reports/materiales', requireAuth, requireAdmin, reportController.getMaterialesReport);
+router.get('/reports/scores', requireAuth, requireAdmin, reportController.getScoresReport);
+router.get('/reports/recolecciones', requireAuth, requireAdmin, reportController.getRecolectionsReport);
 
 // ==========================================
 // REPORTES DE SOLICITUD (6 rutas)
 // ==========================================
-router.get('/request-reports', requestReportController.getAllReports);
-router.post('/request-reports', requestReportController.createReport);
-router.get('/request-reports/check/:requestId/:prosecutorId', requestReportController.checkUserReported);
+router.get('/request-reports', requireAuth, requireAdmin, requestReportController.getAllReports);
+router.post('/request-reports', requireAuth, requireOwnershipByBody('prosecutorId'), requestReportController.createReport);
+router.get('/request-reports/check/:requestId/:prosecutorId', requireAuth, requireOwnershipByParam('prosecutorId'), requestReportController.checkUserReported);
 router.get('/request-reports/request/:requestId', requestReportController.getReportsByRequest);
-router.get('/request-reports/prosecutor/:prosecutorId', requestReportController.getReportsByProsecutor);
-router.get('/request-reports/:id', requestReportController.getReportById);
-router.patch('/request-reports/:id/state', requestReportController.updateReportStateEndpoint);
-router.delete('/request-reports/:id', requestReportController.deleteReport);
+router.get('/request-reports/prosecutor/:prosecutorId', requireAuth, requireOwnershipByParam('prosecutorId'), requestReportController.getReportsByProsecutor);
+router.get('/request-reports/:id', requireAuth, requireAdmin, requestReportController.getReportById);
+router.patch('/request-reports/:id/state', requireAuth, requireAdmin, requestReportController.updateReportStateEndpoint);
+router.delete('/request-reports/:id', requireAuth, requireAdmin, requestReportController.deleteReport);
 
 // ==========================================
 // SISTEMA (1 ruta)
@@ -247,5 +261,13 @@ router.get('/health', (req, res) => {
     uptime: process.uptime()
   });
 });
+
+// ==========================================
+// SEGURIDAD ADMIN (4 rutas)
+// ==========================================
+router.get('/security/config/:key', requireAuth, requireAdmin, securityController.getAppConfig);
+router.put('/security/config/:key', requireAuth, requireAdmin, securityController.upsertAppConfig);
+router.get('/security/suspicious-activity', requireAuth, requireAdmin, securityController.listSuspiciousActivity);
+router.post('/security/blacklist', requireAuth, requireAdmin, securityController.addBlacklist);
 
 export default router;

@@ -13,13 +13,16 @@ export const getAllAnnouncements = async (req, res) => {
   try {
     console.log("[INFO] getAllAnnouncements controller called");
     
-    const { state } = req.query;
-    console.log("[INFO] getAllAnnouncements - Query params:", { state });
+    const { state, limit = '50', offset = '0' } = req.query;
+    console.log("[INFO] getAllAnnouncements - Query params:", { state, limit, offset });
 
-    let stateParam = null;
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+
+    let stateParam = 1;
     
     if (state !== undefined) {
-      const stateValue = parseInt(state);
+      const stateValue = parseInt(state, 10);
       if (![0, 1].includes(stateValue)) {
         return res.status(400).json({
           success: false,
@@ -29,16 +32,25 @@ export const getAllAnnouncements = async (req, res) => {
       stateParam = stateValue;
       console.log("[INFO] getAllAnnouncements - Filtrando por estado:", stateValue);
     } else {
-      console.log("[INFO] getAllAnnouncements - Sin filtro de estado, retornando todos");
+      console.log("[INFO] getAllAnnouncements - Sin estado, filtrando activos por defecto");
     }
 
-    const announcements = await AnnouncementModel.getAll(stateParam);
+    const { rows: announcements, total } = await AnnouncementModel.getAllPaginated(
+      stateParam,
+      parsedLimit,
+      parsedOffset
+    );
     
     console.log("[INFO] getAllAnnouncements controller - announcements found:", announcements.length);
     
     res.json({
       success: true,
-      data: announcements
+      data: announcements,
+      meta: {
+        total,
+        limit: parsedLimit,
+        offset: parsedOffset
+      }
     });
   } catch (error) {
     console.error("[ERROR] getAllAnnouncements controller:", error);

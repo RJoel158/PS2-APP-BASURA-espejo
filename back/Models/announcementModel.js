@@ -45,6 +45,46 @@ export const getAll = async (state = null) => {
   }
 };
 
+export const getAllPaginated = async (state = 1, limit = 50, offset = 0) => {
+  try {
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as total FROM announcement WHERE state = ?`,
+      [state]
+    );
+
+    const [rows] = await db.query(
+      `SELECT 
+        a.id, 
+        a.title, 
+        a.description,
+        a.url,
+        a.imagePath, 
+        a.targetRole, 
+        a.state,
+        a.createdDate,
+        a.createdBy
+       FROM announcement a
+       WHERE a.state = ?
+       ORDER BY a.createdDate DESC
+       LIMIT ? OFFSET ?`,
+      [state, limit, offset]
+    );
+
+    return {
+      rows,
+      total: countRows[0]?.total || 0
+    };
+  } catch (err) {
+    console.error('[ERROR] AnnouncementModel.getAllPaginated:', {
+      state,
+      limit,
+      offset,
+      message: err.message
+    });
+    throw err;
+  }
+};
+
 /**
  * Obtener anuncio por ID
  */

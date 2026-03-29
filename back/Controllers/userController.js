@@ -3,6 +3,14 @@ import bcrypt from "bcrypt";
 import * as UserModel from "../Models/userModel.js";
 import { sendCredentialsEmail, sendRejectionEmail } from "../Services/emailService.js";
 import { Validator } from "../shared/Validator.js";
+import {
+  clearAuthCookies,
+  getRefreshTokenFromRequest,
+  setAuthCookies,
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken
+} from "../shared/auth.js";
 
 /** GET /users */
 export const getUsers = async (req, res) => {
@@ -124,6 +132,20 @@ export const loginUser = async (req, res) => {
         return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
     }
 
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      roleId: user.roleId,
+      state: user.state
+    };
+
+    const accessToken = signAccessToken(tokenPayload);
+    const refreshToken = signRefreshToken(tokenPayload);
+
+    // Soporte de transicion: cookies seguras + token en payload para clientes legacy.
+    setAuthCookies(res, accessToken, refreshToken);
+
     console.log("[INFO] Login successful for", { email });
     res.json({
       success: true,
@@ -131,7 +153,9 @@ export const loginUser = async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
+        roleId: user.roleId,
         state: user.state,
+        token: accessToken,
       },
     });
   } catch (err) {
@@ -179,7 +203,6 @@ export const createUser = async (req, res) => {
         success: true,
         id: result.userId,
         personId: result.personId,
-        tempPassword: result.password,
       });
 
       if (result.password) {
@@ -930,4 +953,50 @@ export const approveInstitution = async (req, res) => {
       error: "Error al aprobar institución" 
     });
   }
+};
+
+/** POST /users/refresh-token */
+export const refreshToken = async (req, res) => {
+  try {
+    const refreshTokenCookie = getRefreshTokenFromRequest(req);
+
+    if (!refreshTokenCookie) {
+      return res.status(401).json({ success: false, error: 'Refresh token no encontrado' });
+    }
+
+    const payload = verifyRefreshToken(refreshTokenCookie);
+    const tokenPayload = {
+      id: payload.id,
+      email: payload.email,
+      role: payload.role,
+      roleId: payload.roleId,
+      state: payload.state
+    };
+
+    const newAccessToken = signAccessToken(tokenPayload);
+    const newRefreshToken = signRefreshToken(tokenPayload);
+
+    setAuthCookies(res, newAccessToken, newRefreshToken);
+
+    return res.json({
+      success: true,
+      user: {
+        id: payload.id,
+        email: payload.email,
+        role: payload.role,
+        roleId: payload.roleId,
+        state: payload.state,
+        token: newAccessToken
+      }
+    });
+  } catch (error) {
+    clearAuthCookies(res);
+    return res.status(401).json({ success: false, error: 'Refresh token inválido o expirado' });
+  }
+};
+
+/** POST /users/logout */
+export const logoutUser = async (req, res) => {
+  clearAuthCookies(res);
+  return res.json({ success: true, message: 'Sesión cerrada' });
 };

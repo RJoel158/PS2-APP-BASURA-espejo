@@ -6,6 +6,7 @@ import { config } from '../config/environment';
 const api: AxiosInstance = axios.create({
   baseURL: config.api.baseUrl,
   timeout: config.api.timeout,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,7 +34,32 @@ api.interceptors.request.use(
 // Interceptor para manejar respuestas y errores
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config || {};
+    const requestUrl = String(originalRequest.url || '');
+
+    // Intentar refrescar sesion una sola vez antes de forzar logout.
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !requestUrl.includes('/users/login') &&
+      !requestUrl.includes('/users/refresh-token')
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshResponse = await api.post('/api/users/refresh-token');
+        const refreshedUser = refreshResponse?.data?.user;
+        if (refreshedUser) {
+          const { token: _token, ...safeUser } = refreshedUser;
+          localStorage.setItem('user', JSON.stringify(safeUser));
+        }
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Continuar con limpieza y redireccion.
+      }
+    }
+
     // Solo redirigir a login si estamos en una ruta protegida (no en login)
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
