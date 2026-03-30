@@ -41,7 +41,25 @@ const createPeriod = async (req, res) => {
 import RankingPeriod from '../Models/rankingPeriodModel.js';
 import RankingHistory from '../Models/rankingHistoryModel.js';
 import RankingTops from '../Models/rankingTopsModel.js';
+import * as AppConfigModel from '../Models/appConfigModel.js';
 import db from '../config/DBConnect.js';
+
+const parseRankingDecreasePercent = (rawValue, fallback = 10) => {
+  let normalized = rawValue;
+  if (typeof rawValue === 'string') {
+    try {
+      normalized = JSON.parse(rawValue);
+    } catch {
+      normalized = rawValue;
+    }
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0) return 0;
+  if (parsed > 100) return 100;
+  return parsed;
+};
 
 const RankingController = {
   // Obtener periodo activo o último cerrado
@@ -67,20 +85,40 @@ const RankingController = {
   getLiveRankingByPeriod: async (req, res) => {
     const { periodo_id } = req.params;
     try {
-      // Top 10 recicladores por score global (roleId=3)
+      // Top 10 recicladores por score agregado (tabla score)
       const [recicladores] = await db.query(`
-        SELECT u.id AS user_id, u.email, 'reciclador' AS rol, u.score AS puntaje_final
+        SELECT
+          u.id AS user_id,
+          u.email,
+          'reciclador' AS rol,
+          COALESCE(SUM(s.score), 0) AS puntaje_final
         FROM users u
+        LEFT JOIN score s
+          ON s.ratedToUserId = u.id
+         AND s.state = 1
         WHERE u.roleId = 3
-        ORDER BY u.score DESC
+          AND u.state != 0
+        GROUP BY u.id, u.email
+        HAVING COALESCE(SUM(s.score), 0) > 0
+        ORDER BY puntaje_final DESC, u.id ASC
         LIMIT 10
       `);
-      // Top 10 recolectores por score global (roleId=2)
+      // Top 10 recolectores por score agregado (tabla score)
       const [recolectores] = await db.query(`
-        SELECT u.id AS user_id, u.email, 'recolector' AS rol, u.score AS puntaje_final
+        SELECT
+          u.id AS user_id,
+          u.email,
+          'recolector' AS rol,
+          COALESCE(SUM(s.score), 0) AS puntaje_final
         FROM users u
+        LEFT JOIN score s
+          ON s.ratedToUserId = u.id
+         AND s.state = 1
         WHERE u.roleId = 2
-        ORDER BY u.score DESC
+          AND u.state != 0
+        GROUP BY u.id, u.email
+        HAVING COALESCE(SUM(s.score), 0) > 0
+        ORDER BY puntaje_final DESC, u.id ASC
         LIMIT 10
       `);
       res.json({ success: true, recicladores, recolectores });
@@ -139,6 +177,7 @@ const RankingController = {
 
   // Cerrar periodo y registrar ranking
   closePeriod: async (req, res) => {
+    let conn;
     try {
       const { periodo_id } = req.body;
       
@@ -151,25 +190,43 @@ const RankingController = {
       }
 
       console.log('[RANKING] Cerrando periodo:', periodo_id);
-      // 1. Actualizar estado del periodo
-      await RankingPeriod.close(periodo_id);
-      console.log('[RANKING] Periodo cerrado en BD');
 
-      // 2. Obtener top 5 recicladores y top 5 recolectores usando el nombre del rol
-      // Recicladores: roleId=3, sumar score por ratedToUserId
-      const [recicladores] = await db.query(
-        `SELECT u.id AS user_id, 'reciclador' AS rol, u.score AS puntaje_final
+      conn = await db.getConnection();
+      await conn.beginTransaction();
+
+    
+     
+      const [recicladores] = await conn.query(
+        `SELECT
+           u.id AS user_id,
+           'reciclador' AS rol,
+           COALESCE(SUM(s.score), 0) AS puntaje_final
          FROM users u
+         LEFT JOIN score s
+           ON s.ratedToUserId = u.id
+          AND s.state = 1
          WHERE u.roleId = 3
-         ORDER BY u.score DESC
+           AND u.state != 0
+         GROUP BY u.id
+         HAVING COALESCE(SUM(s.score), 0) > 0
+         ORDER BY puntaje_final DESC, u.id ASC
          LIMIT 5`
       );
-      // Recolectores: roleId=2, sumar score por ratedToUserId
-      const [recolectores] = await db.query(
-        `SELECT u.id AS user_id, 'recolector' AS rol, u.score AS puntaje_final
+
+      const [recolectores] = await conn.query(
+        `SELECT
+           u.id AS user_id,
+           'recolector' AS rol,
+           COALESCE(SUM(s.score), 0) AS puntaje_final
          FROM users u
+         LEFT JOIN score s
+           ON s.ratedToUserId = u.id
+          AND s.state = 1
          WHERE u.roleId = 2
-         ORDER BY u.score DESC
+           AND u.state != 0
+         GROUP BY u.id
+         HAVING COALESCE(SUM(s.score), 0) > 0
+         ORDER BY puntaje_final DESC, u.id ASC
          LIMIT 5`
       );
       console.log('[RANKING] Recicladores:', recicladores);
@@ -197,40 +254,113 @@ const RankingController = {
       console.log('[RANKING] Tops por rol:', topsPorRol);
 
       if (topsPorRol.length > 0) {
-        await RankingTops.insertMany(topsPorRol);
+        const topsValues = topsPorRol.map((t) => [
+          t.periodo_id,
+          t.rol,
+          t.user_id,
+          t.puntaje_final,
+          t.posicion,
+          t.fecha_cierre
+        ]);
+        await conn.query(
+          'INSERT INTO ranking_tops (periodo_id, rol, user_id, puntaje_final, posicion, fecha_cierre) VALUES ?',
+          [topsValues]
+        );
         console.log('[RANKING] Tops guardados en ranking_tops');
-        // Guardar en historial (sin fecha_cierre)
+
+    
         const rankingWithPos = topsPorRol.map(({fecha_cierre, ...rest}) => rest);
-        await RankingHistory.insertMany(rankingWithPos);
+        const historyValues = rankingWithPos.map((h) => [
+          h.periodo_id,
+          h.rol,
+          h.user_id,
+          h.puntaje_final,
+          h.posicion
+        ]);
+        await conn.query(
+          'INSERT INTO ranking_history (periodo_id, rol, user_id, puntaje_final, posicion) VALUES ?',
+          [historyValues]
+        );
         console.log('[RANKING] Ranking guardado en historial');
 
-        // --- DECAY GLOBAL ---
-        // Decay: 1° -30%, 2° -25%, 3° -20%, 4° -15%, 5° -10%, resto -5%
-        // Aplica decay a los top 5
-        const recicladorDecays = [0.3, 0.25, 0.2, 0.15, 0.1];
+        // --- DECAY CONFIGURABLE ---
+        // Se toma de app_config.ranking_decrease. Top 5 reduce 2 puntos porcentuales menos.
+        const rankingDecreaseConfig = await AppConfigModel.getByKey('ranking_decrease');
+        const baseDecreasePercent = parseRankingDecreasePercent(rankingDecreaseConfig?.config_value, 10);
+        const top5DecreasePercent = Math.max(baseDecreasePercent - 2, 0);
+        const top5Decay = top5DecreasePercent / 100;
+        const restDecay = baseDecreasePercent / 100;
+
+        // Aplica decay a los top 5 (sobre score acumulado real)
         for (let i = 0; i < recicladores.length; i++) {
           const userId = recicladores[i].user_id;
-          const decay = recicladorDecays[i] ?? 0.05;
-          await db.query('UPDATE users SET score = ROUND(score * (1 - ?)) WHERE id = ?', [decay, userId]);
+          await conn.query(
+            'UPDATE score SET score = ROUND(score * (1 - ?)) WHERE ratedToUserId = ? AND state = 1',
+            [top5Decay, userId]
+          );
         }
-        const recolectorDecays = [0.3, 0.25, 0.2, 0.15, 0.1];
         for (let i = 0; i < recolectores.length; i++) {
           const userId = recolectores[i].user_id;
-          const decay = recolectorDecays[i] ?? 0.05;
-          await db.query('UPDATE users SET score = ROUND(score * (1 - ?)) WHERE id = ?', [decay, userId]);
+          await conn.query(
+            'UPDATE score SET score = ROUND(score * (1 - ?)) WHERE ratedToUserId = ? AND state = 1',
+            [top5Decay, userId]
+          );
         }
+
         // Decay para el resto de usuarios de cada rol
         const ids = [...recicladores.map(r => r.user_id), ...recolectores.map(r => r.user_id)];
         if (ids.length > 0) {
-          await db.query('UPDATE users SET score = ROUND(score * 0.95) WHERE roleId IN (2,3) AND id NOT IN (?)', [ids]);
+          const placeholders = ids.map(() => '?').join(', ');
+          await conn.query(
+            `UPDATE score s
+             INNER JOIN users u ON s.ratedToUserId = u.id
+             SET s.score = ROUND(s.score * (1 - ?))
+             WHERE s.state = 1
+               AND u.state != 0
+               AND u.roleId IN (2, 3)
+               AND u.id NOT IN (${placeholders})`,
+            [restDecay, ...ids]
+          );
+        } else {
+          await conn.query(
+            `UPDATE score s
+             INNER JOIN users u ON s.ratedToUserId = u.id
+             SET s.score = ROUND(s.score * (1 - ?))
+             WHERE s.state = 1
+               AND u.state != 0
+               AND u.roleId IN (2, 3)` ,
+            [restDecay]
+          );
         }
+
+        await conn.query(
+          "UPDATE ranking_periods SET estado = 'cerrado', fecha_fin = NOW() WHERE id = ?",
+          [periodo_id]
+        );
+        console.log('[RANKING] Periodo cerrado en BD');
+
+        await conn.commit();
         res.json({ success: true, ranking: topsPorRol });
       } else {
+        await conn.query(
+          "UPDATE ranking_periods SET estado = 'cerrado', fecha_fin = NOW() WHERE id = ?",
+          [periodo_id]
+        );
+        await conn.commit();
         res.json({ success: false, message: 'No hay puntajes para guardar en el ranking de este periodo.' });
       }
     } catch (err) {
+      if (conn) {
+        try {
+          await conn.rollback();
+        } catch (rollbackErr) {
+          console.error('[RANKING] Error en rollback:', rollbackErr);
+        }
+      }
       console.error('[RANKING] Error al cerrar periodo:', err);
       res.status(500).json({ success: false, error: err.message });
+    } finally {
+      if (conn) conn.release();
     }
   },
 };

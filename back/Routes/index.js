@@ -43,6 +43,7 @@ import rankingController from '../Controllers/rankingController.js';
 import * as reportController from '../Controllers/reportController.js';
 import * as requestReportController from '../Controllers/requestReportController.js';
 import * as userMaterialController from '../Controllers/userMaterialController.js';
+import appConfigRoutes from './appConfigRoutes.js';
 import * as securityController from '../Controllers/securityController.js';
 import {
   requireAuth,
@@ -261,6 +262,11 @@ router.get('/health', (req, res) => {
     uptime: process.uptime()
   });
 });
+
+// ==========================================
+// APP CONFIG (2 rutas)
+// ==========================================
+router.use('/app-config', appConfigRoutes);
 
 // ==========================================
 // SEGURIDAD ADMIN (8 rutas)

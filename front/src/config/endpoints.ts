@@ -178,6 +178,14 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================
+  // CONFIGURACION APP - /api/app-config
+  // ============================================
+  APP_CONFIG: {
+    SAVE: '/api/app-config',                                         // POST - Crea/actualiza por config_key
+    GET_BY_KEY: (configKey: string) => `/api/app-config/${configKey}`, // GET - Obtener por config_key
+  },
+
+  // ============================================
   // SISTEMA
   // ============================================
   SYSTEM: {

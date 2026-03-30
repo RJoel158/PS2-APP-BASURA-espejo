@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import CommonHeader from '../CommonComp/CommonHeader';
 import CheckModal from '../CommonComp/CheckModal';
+import RankingConfiguration from './RankingConfiguration';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
+import './RankingPeriodsAdminTheme.css';
 
 interface Period {
   id: number;
@@ -89,7 +91,10 @@ const RankingPeriodsAdmin: React.FC = () => {
         recicladores: res.data.recicladores || [],
         recolectores: res.data.recolectores || []
       });
+      setError(null);
     } catch (err) {
+      const message = (err as any)?.response?.data?.error || 'Error al cargar ranking en vivo';
+      setError(message);
       setRanking({ recicladores: [], recolectores: [] });
     } finally {
       setLoadingRanking(false);
@@ -105,7 +110,10 @@ const RankingPeriodsAdmin: React.FC = () => {
       const recicladores = res.data.tops.filter((r: any) => r.rol === 'reciclador');
       const recolectores = res.data.tops.filter((r: any) => r.rol === 'recolector');
       setRanking({ recicladores, recolectores });
+      setError(null);
     } catch (err) {
+      const message = (err as any)?.response?.data?.error || 'Error al cargar ranking histórico';
+      setError(message);
       setRanking({ recicladores: [], recolectores: [] });
     } finally {
       setLoadingRanking(false);
@@ -138,11 +146,21 @@ const RankingPeriodsAdmin: React.FC = () => {
     setMensaje('');
     setLoadingRanking(true);
     try {
-      await api.post(API_ENDPOINTS.RANKING.CLOSE_PERIOD, { periodo_id: periodToClose });
+      const closeRes = await api.post(API_ENDPOINTS.RANKING.CLOSE_PERIOD, { periodo_id: periodToClose });
       await fetchPeriods();
-      setMensaje('Periodo cerrado y ranking guardado');
+      if (closeRes?.data?.success) {
+        setMensaje('Periodo cerrado y ranking guardado');
+      } else {
+        setMensaje(closeRes?.data?.message || 'Periodo cerrado sin datos de ranking para mostrar');
+      }
+      if (selectedPeriodId === periodToClose) {
+        await fetchHistoricalRanking(periodToClose);
+      }
+      setError(null);
     } catch (err) {
-      setMensaje('Error al cerrar periodo');
+      const message = (err as any)?.response?.data?.error || 'Error al cerrar periodo';
+      setMensaje(message);
+      setError(message);
     } finally {
       setLoadingRanking(false);
       setPeriodToClose(null);
@@ -151,10 +169,11 @@ const RankingPeriodsAdmin: React.FC = () => {
 
   // Filtrar periodos eliminados (solo mostrar 'activo' y 'cerrado')
   const visiblePeriods = periods.filter(p => p.estado === 'activo' || p.estado === 'cerrado');
+  const hasSelectedPeriod = selectedPeriodId !== null;
 
   return (
     <div
-      className="ranking-periods-dashboard"
+      className="ranking-periods-dashboard ranking-theme-page"
       style={{
         paddingLeft: '2.5rem',
         paddingRight: '2.5rem',
@@ -168,7 +187,7 @@ const RankingPeriodsAdmin: React.FC = () => {
         searchQuery=""
         onSearch={() => {}}
       />
-      <div className="card mb-4 p-4">
+      <div className="card mb-4 p-4 ranking-theme-card">
         <button
           className="btn btn-success mb-3"
           disabled={periods.some(p => p.estado === 'activo')}
@@ -180,12 +199,17 @@ const RankingPeriodsAdmin: React.FC = () => {
           <div className={`alert mt-2 ${mensaje.startsWith('❌') ? 'alert-danger' : 'alert-success'}`}>{mensaje}</div>
         )}
         <div className="d-flex align-items-center gap-3 mb-3">
-          <label style={{ fontWeight: 600 }}>Selecciona periodo:</label>
+          <label htmlFor="ranking-period-selector" style={{ fontWeight: 600 }}>Selecciona periodo:</label>
           <select
+            id="ranking-period-selector"
+            title="Selecciona un periodo de ranking"
             className="form-select"
             style={{ maxWidth: 220 }}
             value={selectedPeriodId ?? ''}
-            onChange={e => setSelectedPeriodId(Number(e.target.value))}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedPeriodId(value ? Number(value) : null);
+            }}
           >
             <option value="">-- Selecciona --</option>
             {periods.map(p => (
@@ -195,7 +219,15 @@ const RankingPeriodsAdmin: React.FC = () => {
             ))}
           </select>
         </div>
-        {selectedPeriodId && (
+      </div>
+
+      <div className="card mb-4 p-4 ranking-theme-card">
+        <RankingConfiguration />
+      </div>
+
+      {hasSelectedPeriod && (
+      <div className="card mb-4 p-4 ranking-theme-card">
+        {(
           <div className="mb-3">
             {(() => {
               const period = periods.find(p => p.id === selectedPeriodId);
@@ -203,9 +235,9 @@ const RankingPeriodsAdmin: React.FC = () => {
               return (
                 <div>
                   <strong>Fecha inicio:</strong> {formatDateDisplay(period.fecha_inicio)}<br />
-                  <strong>Fecha fin:</strong> {period.estado === 'cerrado' ? formatDateDisplay(period.fecha_fin) : <span className="badge bg-warning">En curso</span>}
+                  <strong>Fecha fin:</strong> {period.estado === 'cerrado' ? formatDateDisplay(period.fecha_fin) : <span className="badge ranking-status-pill">En curso</span>}
                   {period.estado === 'activo' && (
-                    <button className="btn btn-warning ms-3" onClick={() => handleClose(period.id)}>Cerrar periodo</button>
+                    <button className="btn ms-3 ranking-close-btn" onClick={() => handleClose(period.id)}>Cerrar periodo</button>
                   )}
                 </div>
               );
@@ -213,24 +245,24 @@ const RankingPeriodsAdmin: React.FC = () => {
           </div>
         )}
         {/* Ranking por periodo */}
-        {selectedPeriodId && (
+        {(
           <div className="row">
             <div className="col-md-6">
-              <div className="card mb-4" style={{ minHeight: 350, overflowX: 'auto' }}>
+              <div className="card mb-4 ranking-top-card" style={{ minHeight: 350, overflowX: 'auto' }}>
                 <div className="card-body">
-                  <h5 className="card-title">Top 10 Recicladores</h5>
-                  <div className="table-responsive" style={{ maxHeight: 300, overflowY: 'auto', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                  <h5 className="card-title ranking-top-title">Top 10 Recicladores</h5>
+                  <div className="table-responsive ranking-top-table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
                     {loadingRanking ? (
-                      <div style={{ textAlign: 'center', padding: '2rem' }}>
+                      <div className="ranking-top-loading" style={{ textAlign: 'center', padding: '2rem' }}>
                         <span className="spinner-border spinner-border-sm" /> Procesando ranking...
                       </div>
                     ) : (
-                      <table className="table table-bordered table-hover ranking-table user-management-table" style={{ minWidth: 350, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                        <thead className="table-light" style={{ background: 'linear-gradient(90deg, #b2f7ef 0%, #e3f6ed 100%)', color: '#1b6d4b', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                      <table className="table table-bordered table-hover ranking-table user-management-table ranking-top-table" style={{ minWidth: 350 }}>
+                        <thead className="table-light ranking-top-thead">
                           <tr>
-                            <th style={{ width: 80, textAlign: 'center', borderTopLeftRadius: 16, background: 'inherit', color: 'inherit' }}>Posición</th>
-                            <th style={{ minWidth: 220, background: 'inherit', color: 'inherit' }}>Correo</th>
-                            <th style={{ width: 100, textAlign: 'center', borderTopRightRadius: 16, background: 'inherit', color: 'inherit' }}>Puntaje</th>
+                            <th className="ranking-top-col-pos">Posición</th>
+                            <th className="ranking-top-col-email">Correo</th>
+                            <th className="ranking-top-col-score">Puntaje</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -238,11 +270,11 @@ const RankingPeriodsAdmin: React.FC = () => {
                             ranking.recicladores.map((r, idx) => (
                               <tr key={r.user_id}>
                                 <td style={{ textAlign: 'center' }}>
-                                  <span className="badge bg-success">{idx + 1}</span>
+                                  <span className="badge ranking-top-badge ranking-top-badge-recycler">{idx + 1}</span>
                                 </td>
                                 <td style={{ wordBreak: 'break-all' }}>{r.email}</td>
                                 <td style={{ textAlign: 'center' }}>
-                                  <span className="badge bg-primary">{r.puntaje_final}</span>
+                                  <span className="badge ranking-score-badge">{r.puntaje_final}</span>
                                 </td>
                               </tr>
                             ))
@@ -259,21 +291,21 @@ const RankingPeriodsAdmin: React.FC = () => {
               </div>
             </div>
             <div className="col-md-6">
-              <div className="card mb-4" style={{ minHeight: 350, overflowX: 'auto' }}>
+              <div className="card mb-4 ranking-top-card" style={{ minHeight: 350, overflowX: 'auto' }}>
                 <div className="card-body">
-                  <h5 className="card-title">Top 10 Recolectores</h5>
-                  <div className="table-responsive" style={{ maxHeight: 300, overflowY: 'auto', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                  <h5 className="card-title ranking-top-title">Top 10 Recolectores</h5>
+                  <div className="table-responsive ranking-top-table-wrap" style={{ maxHeight: 300, overflowY: 'auto' }}>
                     {loadingRanking ? (
-                      <div style={{ textAlign: 'center', padding: '2rem' }}>
+                      <div className="ranking-top-loading" style={{ textAlign: 'center', padding: '2rem' }}>
                         <span className="spinner-border spinner-border-sm" /> Procesando ranking...
                       </div>
                     ) : (
-                      <table className="table table-bordered table-hover ranking-table user-management-table" style={{ minWidth: 350, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                        <thead className="table-light" style={{ background: 'linear-gradient(90deg, #b2f7ef 0%, #e3f6ed 100%)', color: '#1b6d4b', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                      <table className="table table-bordered table-hover ranking-table user-management-table ranking-top-table" style={{ minWidth: 350 }}>
+                        <thead className="table-light ranking-top-thead">
                           <tr>
-                            <th style={{ width: 80, textAlign: 'center', borderTopLeftRadius: 16, background: 'inherit', color: 'inherit' }}>Posición</th>
-                            <th style={{ minWidth: 220, background: 'inherit', color: 'inherit' }}>Correo</th>
-                            <th style={{ width: 100, textAlign: 'center', borderTopRightRadius: 16, background: 'inherit', color: 'inherit' }}>Puntaje</th>
+                            <th className="ranking-top-col-pos">Posición</th>
+                            <th className="ranking-top-col-email">Correo</th>
+                            <th className="ranking-top-col-score">Puntaje</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -281,11 +313,11 @@ const RankingPeriodsAdmin: React.FC = () => {
                             ranking.recolectores.map((r, idx) => (
                               <tr key={r.user_id}>
                                 <td style={{ textAlign: 'center' }}>
-                                  <span className="badge bg-warning text-dark">{idx + 1}</span>
+                                  <span className="badge ranking-top-badge ranking-top-badge-collector">{idx + 1}</span>
                                 </td>
                                 <td style={{ wordBreak: 'break-all' }}>{r.email}</td>
                                 <td style={{ textAlign: 'center' }}>
-                                  <span className="badge bg-primary">{r.puntaje_final}</span>
+                                  <span className="badge ranking-score-badge">{r.puntaje_final}</span>
                                 </td>
                               </tr>
                             ))
@@ -304,35 +336,40 @@ const RankingPeriodsAdmin: React.FC = () => {
           </div>
         )}
       </div>
+      )}
       {/* Tabla de periodos (gestión) */}
-      <div className="ranking-periods-panel mt-4">
+      <div className="ranking-periods-panel mt-4 ranking-theme-card">
         {loading ? <div className="ranking-loading">Cargando...</div> : error ? <div className="alert alert-danger">{error}</div> : (
-          <table className="table table-bordered table-hover ranking-table user-management-table" style={{ borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <thead className="table-light" style={{ background: 'linear-gradient(90deg, #b2f7ef 0%, #e3f6ed 100%)', color: '#1b6d4b', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-              <tr>
-                <th style={{ background: 'inherit', color: 'inherit', borderTopLeftRadius: 16 }}>Inicio</th>
-                <th style={{ background: 'inherit', color: 'inherit' }}>Fin</th>
-                <th style={{ background: 'inherit', color: 'inherit' }}>Estado</th>
-                <th style={{ background: 'inherit', color: 'inherit', borderTopRightRadius: 16 }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visiblePeriods.map(period => (
-                <tr key={period.id}>
-                  <td>{formatDateDisplay(period.fecha_inicio)}</td>
-                  <td>{period.estado === 'cerrado' ? formatDateDisplay(period.fecha_fin) : <span className="badge bg-warning">En curso</span>}</td>
-                  <td>
-                    <span className={`badge ${period.estado === 'activo' ? 'bg-success' : 'bg-secondary'}`}>{period.estado}</span>
-                  </td>
-                  <td>
-                    {period.estado === 'activo' && (
-                      <button className="btn btn-warning btn-sm" onClick={() => handleClose(period.id)}><i className="bi bi-lock"></i> Cerrar</button>
-                    )}
-                  </td>
+          <div className="table-responsive ranking-bottom-table-wrap">
+            <table className="table table-bordered table-hover ranking-table user-management-table ranking-bottom-table mb-0">
+              <thead className="table-light ranking-bottom-thead">
+                <tr>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visiblePeriods.map(period => (
+                  <tr key={period.id}>
+                    <td>{formatDateDisplay(period.fecha_inicio)}</td>
+                    <td>{period.estado === 'cerrado' ? formatDateDisplay(period.fecha_fin) : <span className="badge ranking-status-pill">En curso</span>}</td>
+                    <td>
+                      <span className={`badge ${period.estado === 'activo' ? 'ranking-state-active' : 'ranking-state-closed'}`}>{period.estado}</span>
+                    </td>
+                    <td>
+                      {period.estado === 'activo' && (
+                        <button className="btn btn-sm ranking-close-btn" onClick={() => handleClose(period.id)}>
+                          <i className="bi bi-lock"></i> Cerrar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

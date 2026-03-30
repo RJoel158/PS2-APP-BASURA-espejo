@@ -1,0 +1,126 @@
+.ranking-config {
+  border: none;
+}
+
+.ranking-config__toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ranking-config__toggle-title {
+  color: #1b6d4b;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.ranking-config__toggle-icon {
+  color: #1b6d4b;
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.ranking-config__toggle-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.ranking-config__content-box {
+  margin-top: 0.75rem;
+  border: 1px solid #d9efe5;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.ranking-config__layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.ranking-config__controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ranking-config__label {
+  font-weight: 600;
+  color: #1b6d4b;
+}
+
+.ranking-config__field-group {
+  max-width: 100%;
+  padding: 0;
+}
+
+.ranking-config__percent-input-wrap {
+  max-width: 280px;
+}
+
+.ranking-config__results-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.35rem;
+}
+
+.ranking-config__result-block {
+  padding: 0.1rem 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+.ranking-config__reset {
+  border: 1px solid #d4dad7;
+}
+
+.ranking-config__result-title {
+  color: #1b6d4b;
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+
+.ranking-config__result-value {
+  font-size: 2rem;
+  color: #149d52;
+  line-height: 1.05;
+  margin-top: 0.2rem;
+}
+
+.ranking-config__actions {
+  padding-top: 0;
+}
+
+.ranking-config__inline-msg {
+  display: block;
+  margin-top: 0.45rem;
+  color: #2f6f52;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 576px) {
+  .ranking-config__content-box {
+    padding: 0.85rem;
+  }
+
+  .ranking-config__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-config__percent-input-wrap {
+    max-width: 100%;
+  }
+
+  .ranking-config__results-panel {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
