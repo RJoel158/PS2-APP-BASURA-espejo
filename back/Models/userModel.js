@@ -107,7 +107,7 @@ export const getById = async (id) => {
 export const loginUser = async (email) => {
   console.log("[INFO] loginUser model called with email:", email);
   const [rows] = await db.query(
-    `SELECT u.id, u.email, u.phone, u.password, r.name AS role, u.state
+    `SELECT u.id, u.email, u.phone, u.password, u.roleId, r.name AS role, u.state
      FROM users u
      LEFT JOIN role r ON u.roleId = r.id
      WHERE u.email = ? AND u.state != 0`,

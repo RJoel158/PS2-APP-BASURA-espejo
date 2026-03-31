@@ -62,8 +62,9 @@ const Login: React.FC = () => {
       // Login exitoso
       if (data.success) {
         setMensaje("✅ Bienvenido, " + data.user.email);
-        //Guardado de sesión
-        localStorage.setItem("user", JSON.stringify(data.user));
+        // Guardado de sesión sin token para reducir exposición en frontend.
+        const { token: _token, ...safeUser } = data.user;
+        localStorage.setItem("user", JSON.stringify(safeUser));
         //Limpieza del formulario y erores
         setForm({ email: "", password: "" });
         setErrors({});
@@ -91,7 +92,7 @@ const Login: React.FC = () => {
       console.error("Error de conexión:", err);
       
       // Manejar errores HTTP (401, 400, etc.)
-      if (err.response?.status === 401 || err.response?.status === 400) {
+      if (err.response?.status === 401 || err.response?.status === 400 || err.response?.status === 403) {
         const errorMessage = err.response?.data?.error || "Usuario o contraseña incorrectos";
         setMensaje("❌ " + errorMessage);
         setForm((f) => ({ ...f, password: "" })); // resetea la contraseña

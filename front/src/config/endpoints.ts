@@ -191,6 +191,21 @@ export const API_ENDPOINTS = {
   SYSTEM: {
     HEALTH: '/api/health',                                           // GET - Estado del servidor
   },
+
+  // ============================================
+  // SEGURIDAD ADMIN - /api/security
+  // ============================================
+  SECURITY: {
+    CONFIG_LIST: '/api/security/config',
+    CONFIG_BY_KEY: (key: string) => `/api/security/config/${encodeURIComponent(key)}`,
+    SUSPICIOUS_ACTIVITY_GROUPED: '/api/security/suspicious-activity/grouped',
+    SUSPICIOUS_ACTIVITY_DETAILS: '/api/security/suspicious-activity/details',
+    SUSPICIOUS_ACTIVITY: '/api/security/suspicious-activity',
+    AUDIT_LOG: '/api/security/audit-log',
+    BLACKLIST_LIST: '/api/security/blacklist',
+    BLACKLIST_ADD: '/api/security/blacklist',
+    BLACKLIST_DEACTIVATE: (id: number) => `/api/security/blacklist/${id}/deactivate`,
+  },
 } as const;
 
 export default API_ENDPOINTS;

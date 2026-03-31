@@ -15,6 +15,8 @@ import DenunciasAdmin from './ReportInfoAdmin';
 import UserManagement from '../UserManagementComp/UserManagement';
 import CollectorRequests from '../CollectorRequestsComp/CollectorRequests';
 import RankingPeriodsAdmin from './RankingPeriodsAdmin';
+import SecurityAdmin from './SecurityAdmin';
+import AppConfigAdmin from './AppConfigAdmin';
 import ChangePasswordModal from '../PasswordComp/ChangePasswordModal';
 import './AdminDashboard.css';
 
@@ -59,7 +61,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const menuFromQuery = searchParams.get('menu');
     // Si no viene un valor válido en la URL usar 'control'
-    const validMenus = ['control', 'reportes', 'denuncias', 'usuarios', 'materiales', 'anuncios', 'accesos', 'ranking'];
+    const validMenus = ['control', 'reportes', 'denuncias', 'usuarios', 'materiales', 'anuncios', 'accesos', 'ranking', 'seguridad', 'configuraciones'];
     if (menuFromQuery && validMenus.includes(menuFromQuery)) {
       setActiveMenu(menuFromQuery);
     } else {
@@ -131,6 +133,10 @@ export default function AdminDashboard() {
         return <CollectorRequests />;
       case 'ranking':
         return <RankingPeriodsAdmin />;
+      case 'seguridad':
+        return <SecurityAdmin />;
+      case 'configuraciones':
+        return <AppConfigAdmin />;
       default:
         return (
           <div className="dashboard-content">

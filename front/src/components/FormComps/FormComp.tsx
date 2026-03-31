@@ -585,14 +585,27 @@ const FormComp: React.FC = () => {
         });
         setMensaje(data.error || "Error desconocido");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error API:", error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de conexión',
-        text: 'No se pudo conectar al servidor',
-      });
-      setMensaje("Error de conexión con el servidor");
+
+      const backendMessage = error?.response?.data?.error || error?.response?.data?.message;
+      const status = error?.response?.status;
+
+      if (backendMessage) {
+        Swal.fire({
+          icon: 'error',
+          title: `Error ${status || ''}`.trim(),
+          text: backendMessage,
+        });
+        setMensaje(backendMessage);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de conexión',
+          text: 'No se pudo conectar al servidor',
+        });
+        setMensaje("Error de conexión con el servidor");
+      }
     } finally {
       setSubmitting(false);
     }

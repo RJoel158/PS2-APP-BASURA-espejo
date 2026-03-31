@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import fs from 'fs';
@@ -47,6 +48,8 @@ console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***configured***' : 'NOT 
 
 const app = express();
 const server = createServer(app);
+
+app.set('trust proxy', 1);
 
 // Configurar CORS usando variable de entorno
 // Soporta múltiples orígenes separados por coma para túneles/dev
@@ -130,6 +133,9 @@ const connectedUsers = new Map();
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(express.json({ 
   limit: process.env.MAX_FILE_SIZE || '10mb' 
 }));
@@ -217,18 +223,19 @@ app.use((req, res) => {
 
 // Error handler global - SIEMPRE debe ser el último middleware
 app.use((err, req, res, next) => {
+  const status = err.status || 500;
+
   console.error('[ERROR GLOBAL]:', {
     message: err.message,
-    status: err.status || 500,
+    status,
     path: req.path,
     method: req.method,
     stack: err.stack.split('\n').slice(0, 3).join('\n')
   });
   
-  res.status(err.status || 500).json({ 
+  res.status(status).json({ 
     success: false, 
-    error: err.message || 'Error interno del servidor',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: status >= 500 ? 'Error interno del servidor' : (err.message || 'Solicitud inválida')
   });
 });
 

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import './AdminDashboard.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -12,17 +13,46 @@ interface SidebarProps {
 
 export default function Sidebar({ onMenuSelect, activeMenu, isOpen, onClose }: SidebarProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  const menuItems = [
-    { id: 'control', label: 'Panel de Control', icon: 'bi-grid-fill' },
-    { id: 'reportes', label: 'Reportes', icon: 'bi-graph-up' },
-    { id: 'denuncias', label: 'Denuncias', icon: 'bi-exclamation-octagon-fill' },
-    { id: 'usuarios', label: 'Administrar Usuarios', icon: 'bi-people-fill' },
-    { id: 'materiales', label: 'Materiales', icon: 'bi-recycle' },
-    { id: 'anuncios', label: 'Anuncios', icon: 'bi-megaphone-fill' },
-    { id: 'accesos', label: 'Accesos', icon: 'bi-person-check-fill' },
-    { id: 'ranking', label: 'Ranking', icon: 'bi-trophy-fill' }
-  ];
+  const [activeSection, setActiveSection] = useState<'menu' | 'otros'>('menu');
+
+  const menuSections = useMemo(() => ([
+    {
+      id: 'menu' as const,
+      title: 'MENÚ',
+      items: [
+        { id: 'reportes', label: 'Reportes', icon: 'bi-graph-up' },
+        { id: 'denuncias', label: 'Denuncias', icon: 'bi-exclamation-octagon-fill' },
+        { id: 'usuarios', label: 'Administrar Usuarios', icon: 'bi-people-fill' },
+        { id: 'materiales', label: 'Materiales', icon: 'bi-recycle' },
+        { id: 'anuncios', label: 'Anuncios', icon: 'bi-megaphone-fill' },
+        { id: 'accesos', label: 'Accesos', icon: 'bi-person-check-fill' },
+        { id: 'ranking', label: 'Ranking', icon: 'bi-trophy-fill' }
+      ]
+    },
+    {
+      id: 'otros' as const,
+      title: 'OTROS',
+      items: [
+        { id: 'configuraciones', label: 'Configuraciones', icon: 'bi-gear-fill' },
+        { id: 'seguridad', label: 'Seguridad', icon: 'bi-shield-lock-fill' }
+      ]
+    }
+  ]), []);
+
+  useEffect(() => {
+    if (activeMenu === 'configuraciones' || activeMenu === 'seguridad') {
+      setActiveSection('otros');
+      return;
+    }
+    if (activeMenu !== 'control') {
+      setActiveSection('menu');
+    }
+  }, [activeMenu]);
+
+  const visibleItems = useMemo(() => {
+    const section = menuSections.find((s) => s.id === activeSection);
+    return section ? section.items : [];
+  }, [menuSections, activeSection]);
 
   const handleMenuClick = (menuId: string) => {
     onMenuSelect(menuId);
@@ -59,36 +89,49 @@ export default function Sidebar({ onMenuSelect, activeMenu, isOpen, onClose }: S
         </div>
       </div>
 
-      {/* Menú */}
-      <div className="sidebar-menu">
-        <h3 className="sidebar-section-title">MENÚ</h3>
-        <nav className="sidebar-nav">
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => handleMenuClick(item.id)}
-              className={`sidebar-button ${activeMenu === item.id ? 'active' : ''}`}
-            >
-              <i className={`bi ${item.icon} sidebar-button-icon`}></i>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
+      {/* Acceso principal fijo */}
+      <div className="sidebar-control-fixed">
+        <button
+          onClick={() => handleMenuClick('control')}
+          className={`sidebar-button sidebar-button-primary ${activeMenu === 'control' ? 'active' : ''}`}
+        >
+          <i className="bi bi-grid-fill sidebar-button-icon"></i>
+          <span>Panel de Control</span>
+        </button>
       </div>
 
-      {/* Otros */}
-      <div className="sidebar-otros">
-        <h3 className="sidebar-section-title">OTROS</h3>
-        <nav className="sidebar-nav">
-          <button className="sidebar-button">
-            <i className="bi bi-gear-fill sidebar-button-icon"></i>
-            <span>Configuraciones</span>
-          </button>
-          <button className="sidebar-button">
-            <i className="bi bi-question-circle-fill sidebar-button-icon"></i>
-            <span>Ayuda</span>
-          </button>
-        </nav>
+      <div className="sidebar-scroll-content">
+        <div className="sidebar-section-switcher" role="tablist" aria-label="Secciones del menú">
+          {menuSections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`sidebar-switcher-btn ${activeSection === section.id ? 'active' : ''}`}
+              role="tab"
+              aria-selected={activeSection === section.id}
+            >
+              {section.title}
+            </button>
+          ))}
+        </div>
+
+        <div className="sidebar-group sidebar-group-static">
+          <div className="sidebar-group-header">
+            <span className="sidebar-section-title">{activeSection === 'menu' ? 'MENÚ PRINCIPAL' : 'HERRAMIENTAS'}</span>
+          </div>
+          <nav className="sidebar-nav sidebar-nav-compact">
+            {visibleItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => handleMenuClick(item.id)}
+                className={`sidebar-button ${activeMenu === item.id ? 'active' : ''}`}
+              >
+                <i className={`bi ${item.icon} sidebar-button-icon`}></i>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
     </div>
     </>

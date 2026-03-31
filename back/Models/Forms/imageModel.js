@@ -6,11 +6,21 @@ import db from '../../config/DBConnect.js';
  */
 export const create = async (conn, idRequest, imagePath) => {
   try {
-    const [res] = await conn.query(
-      `INSERT INTO image (idRequest, image, uploadedDate)
-       VALUES (?, ?, NOW())`,
-      [idRequest, imagePath]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `INSERT INTO image (idRequest, image, uploadedDate, state)
+         VALUES (?, ?, NOW(), 1)`,
+        [idRequest, imagePath]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `INSERT INTO image (idRequest, image, uploadedDate)
+         VALUES (?, ?, NOW())`,
+        [idRequest, imagePath]
+      );
+    }
     return res.insertId;
   } catch (err) {
     console.error("[ERROR] ImageModel.create:", {
@@ -31,12 +41,20 @@ export const create = async (conn, idRequest, imagePath) => {
  */
 export const createMultiple = async (conn, idRequest, imagePaths) => {
   try {
-    const promises = imagePaths.map(imagePath => 
-      conn.query(
-        `INSERT INTO image (idRequest, image, uploadedDate) VALUES (?, ?, NOW())`,
-        [idRequest, imagePath]
-      )
-    );
+    const promises = imagePaths.map(async (imagePath) => {
+      try {
+        return await conn.query(
+          `INSERT INTO image (idRequest, image, uploadedDate, state) VALUES (?, ?, NOW(), 1)`,
+          [idRequest, imagePath]
+        );
+      } catch (innerErr) {
+        if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+        return conn.query(
+          `INSERT INTO image (idRequest, image, uploadedDate) VALUES (?, ?, NOW())`,
+          [idRequest, imagePath]
+        );
+      }
+    });
     
     const results = await Promise.all(promises);
     return results.map(([result]) => result.insertId);
@@ -80,13 +98,25 @@ export const getAll = async () => {
  */
 export const getByRequestId = async (idRequest) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, idRequest, image, uploadedDate
-       FROM image
-       WHERE idRequest = ?
-       ORDER BY uploadedDate ASC`,
-      [idRequest]
-    );
+    let rows;
+    try {
+      [rows] = await db.query(
+        `SELECT id, idRequest, image, uploadedDate
+         FROM image
+         WHERE idRequest = ? AND state = 1
+         ORDER BY uploadedDate ASC`,
+        [idRequest]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [rows] = await db.query(
+        `SELECT id, idRequest, image, uploadedDate
+         FROM image
+         WHERE idRequest = ?
+         ORDER BY uploadedDate ASC`,
+        [idRequest]
+      );
+    }
     return rows;
   } catch (err) {
     console.error("[ERROR] ImageModel.getByRequestId:", { idRequest, message: err.message, stack: err.stack });
@@ -139,10 +169,19 @@ export const update = async (conn, id, imagePath) => {
  */
 export const deleteById = async (conn, id) => {
   try {
-    const [res] = await conn.query(
-      `DELETE FROM image WHERE id = ?`,
-      [id]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `UPDATE image SET state = 0 WHERE id = ?`,
+        [id]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `DELETE FROM image WHERE id = ?`,
+        [id]
+      );
+    }
     return res.affectedRows > 0;
   } catch (err) {
     console.error("[ERROR] ImageModel.deleteById:", { id, message: err.message, stack: err.stack });
@@ -155,10 +194,19 @@ export const deleteById = async (conn, id) => {
  */
 export const deleteByRequestId = async (conn, idRequest) => {
   try {
-    const [res] = await conn.query(
-      `DELETE FROM image WHERE idRequest = ?`,
-      [idRequest]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `UPDATE image SET state = 0 WHERE idRequest = ?`,
+        [idRequest]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `DELETE FROM image WHERE idRequest = ?`,
+        [idRequest]
+      );
+    }
     return res.affectedRows > 0;
   } catch (err) {
     console.error("[ERROR] ImageModel.deleteByRequestId:", { idRequest, message: err.message, stack: err.stack });
@@ -171,12 +219,23 @@ export const deleteByRequestId = async (conn, idRequest) => {
  */
 export const countByRequestId = async (idRequest) => {
   try {
-    const [rows] = await db.query(
-      `SELECT COUNT(*) as total
-       FROM image
-       WHERE idRequest = ?`,
-      [idRequest]
-    );
+    let rows;
+    try {
+      [rows] = await db.query(
+        `SELECT COUNT(*) as total
+         FROM image
+         WHERE idRequest = ? AND state = 1`,
+        [idRequest]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [rows] = await db.query(
+        `SELECT COUNT(*) as total
+         FROM image
+         WHERE idRequest = ?`,
+        [idRequest]
+      );
+    }
     return rows[0].total;
   } catch (err) {
     console.error("[ERROR] ImageModel.countByRequestId:", { idRequest, message: err.message, stack: err.stack });

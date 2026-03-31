@@ -141,10 +141,20 @@ export const getUnreadCount = async (userId) => {
  */
 export const cleanupExpired = async () => {
   try {
-    const [result] = await db.query(`
-      DELETE FROM notifications 
-      WHERE expireAt IS NOT NULL AND expireAt <= NOW()
-    `);
+    let result;
+    try {
+      [result] = await db.query(`
+        UPDATE notifications 
+        SET state = 0
+        WHERE expireAt IS NOT NULL AND expireAt <= NOW() AND state = 1
+      `);
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [result] = await db.query(`
+        DELETE FROM notifications 
+        WHERE expireAt IS NOT NULL AND expireAt <= NOW()
+      `);
+    }
 
     console.log(`[INFO] Cleaned up ${result.affectedRows} expired notifications`);
     return result.affectedRows;

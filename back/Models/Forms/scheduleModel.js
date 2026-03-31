@@ -6,11 +6,21 @@ import db from '../../config/DBConnect.js';
  */
 export const create = async (conn, start_hour, end_hour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, request_id) => {
   try {
-    const [res] = await conn.query(
-      `INSERT INTO schedule (startHour, endHour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, requestId)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [start_hour, end_hour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, request_id]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `INSERT INTO schedule (startHour, endHour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, requestId, state)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [start_hour, end_hour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, request_id]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `INSERT INTO schedule (startHour, endHour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, requestId)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [start_hour, end_hour, monday, tuesday, wednesday, thursday, friday, saturday, sunday, request_id]
+      );
+    }
     return res.insertId;
   } catch (err) {
     console.error("[ERROR] ScheduleModel.create:", {
@@ -54,13 +64,25 @@ export const getAll = async () => {
  */
 export const getByRequestId = async (request_id) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, startHour, endHour, monday, tuesday, wednesday, 
-              thursday, friday, saturday, sunday, requestId
-       FROM schedule
-       WHERE requestId = ?`,
-      [request_id]
-    );
+    let rows;
+    try {
+      [rows] = await db.query(
+        `SELECT id, startHour, endHour, monday, tuesday, wednesday, 
+                thursday, friday, saturday, sunday, requestId
+         FROM schedule
+         WHERE requestId = ? AND state = 1`,
+        [request_id]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [rows] = await db.query(
+        `SELECT id, startHour, endHour, monday, tuesday, wednesday, 
+                thursday, friday, saturday, sunday, requestId
+         FROM schedule
+         WHERE requestId = ?`,
+        [request_id]
+      );
+    }
     return rows[0] || null;
   } catch (err) {
     console.error("[ERROR] ScheduleModel.getByRequestId:", { request_id, message: err.message, stack: err.stack });
@@ -115,10 +137,19 @@ export const update = async (conn, id, start_hour, end_hour, monday, tuesday, we
  */
 export const deleteByRequestId = async (conn, request_id) => {
   try {
-    const [res] = await conn.query(
-      `DELETE FROM schedule WHERE requestId = ?`,
-      [request_id]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `UPDATE schedule SET state = 0 WHERE requestId = ?`,
+        [request_id]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `DELETE FROM schedule WHERE requestId = ?`,
+        [request_id]
+      );
+    }
     return res.affectedRows > 0;
   } catch (err) {
     console.error("[ERROR] ScheduleModel.deleteByRequestId:", { request_id, message: err.message, stack: err.stack });
@@ -131,10 +162,19 @@ export const deleteByRequestId = async (conn, request_id) => {
  */
 export const deleteById = async (conn, id) => {
   try {
-    const [res] = await conn.query(
-      `DELETE FROM schedule WHERE id = ?`,
-      [id]
-    );
+    let res;
+    try {
+      [res] = await conn.query(
+        `UPDATE schedule SET state = 0 WHERE id = ?`,
+        [id]
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [res] = await conn.query(
+        `DELETE FROM schedule WHERE id = ?`,
+        [id]
+      );
+    }
     return res.affectedRows > 0;
   } catch (err) {
     console.error("[ERROR] ScheduleModel.deleteById:", { id, message: err.message, stack: err.stack });
