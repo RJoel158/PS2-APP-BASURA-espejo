@@ -284,8 +284,6 @@ const RankingController = {
         console.log('[RANKING] Ranking guardado en historial');
 
         // --- DECAY CONFIGURABLE ---
-        // Se toma de app_config.ranking_decrease. Top 5 reduce 3 puntos porcentuales MÁS (más agresivo).
-        // Rest reduce lo normal (sin ventaja).
         const rankingDecreaseConfig = await AppConfigModel.getByKey('ranking_decrease');
         const baseDecreasePercent = parseRankingDecreasePercent(rankingDecreaseConfig?.config_value, 10);
         const top5DecreasePercent = baseDecreasePercent + 3;
