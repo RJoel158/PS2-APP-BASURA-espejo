@@ -21,7 +21,8 @@ const RankingConfiguration: React.FC = () => {
 		setPercent(clampPercent(parsed));
 	};
 
-	const top5Reduction = Math.max(percent - 2, 0);
+	const top5Reduction = percent + 3;
+	const restReduction = percent;
 
 	useEffect(() => {
 		const loadConfig = async () => {
@@ -129,7 +130,7 @@ const RankingConfiguration: React.FC = () => {
 							</div>
 							<div className="ranking-config__result-block">
 								<span className="ranking-config__result-title">Resto de usuarios</span>
-								<strong className="ranking-config__result-value">-{percent}%</strong>
+								<strong className="ranking-config__result-value">-{restReduction}%</strong>
 							</div>
 						</div>
 					</div>
