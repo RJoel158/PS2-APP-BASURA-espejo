@@ -820,7 +820,7 @@ export default function ReportesAdmin() {
                   <table className="admin-reports-table">
                     <thead>
                       <tr>
-                        <th>Score</th>
+                        <th>Calificación</th>
                         <th>Quien Califica</th>
                         <th>Calificado A</th>
                         <th>Comentario</th>
@@ -829,13 +829,14 @@ export default function ReportesAdmin() {
                     </thead>
                     <tbody>
                       {scoresData.details.map((detail: any) => {
+                        const rating = Number(detail.rating) || 0;
                         const scoreColors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
-                        const scoreColor = scoreColors[detail.score - 1];
+                        const scoreColor = rating >= 1 && rating <= 5 ? scoreColors[rating - 1] : '#6b7280';
 
                         return (
                           <tr key={detail.id}>
                             <td className="score" style={{ color: scoreColor }}>
-                              {detail.score} estrellas
+                              {rating} estrellas
                             </td>
                             <td className="username">
                               {detail.ratedByUsername || `Usuario ${detail.ratedByUserId}`}
