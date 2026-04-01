@@ -159,6 +159,7 @@ router.delete('/user-materials/:userId/:materialId', requireAuth, requireOwnersh
 // ==========================================
 // Rutas específicas PRIMERO
 router.get('/request/user/:userId/state', requireAuth, requireOwnershipByParam('userId'), requestController.getRequestsByUserAndState);
+router.get('/request/validate-location', requireAuth, requestController.validateRequestLocation);
 router.post('/request/:id/schedule', appointmentController.createNewAppointment);
 router.get('/request/:id/schedule', requestController.getRequestWithSchedule);
 router.put('/request/:id/state', requestController.updateRequestState);

@@ -3,98 +3,407 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #faf8f1;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(145, 219, 171, 0.28), transparent 34%),
+    radial-gradient(circle at 92% 90%, rgba(241, 205, 152, 0.28), transparent 30%),
+    #f7f4ec;
 }
 
 .app-config-content {
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.9rem;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .app-config-tip {
-  border: 1px solid #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
-  padding: 0.65rem 0.8rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
+  border: 1px solid #c8ead1;
+  background: linear-gradient(110deg, #ebfaef, #f6fcf8);
+  color: #15532f;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.91rem;
 }
 
-.app-config-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  border: 1px dashed #cbd5e1;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  background: #fff;
+.app-config-tip--loading {
+  border-style: dashed;
 }
 
 .app-config-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.9rem;
+}
+
+.app-config-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.app-config-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
 .app-config-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  background: #ffffff;
-  padding: 0.75rem;
+  border: 1px solid #e2e8df;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, #ffffff, #fcfdfb);
+  box-shadow: 0 10px 24px rgba(40, 74, 52, 0.07);
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.75rem;
+}
+
+.app-config-card--geo-primary {
+  border: 1px solid #d8e7db;
+  box-shadow: 0 14px 28px rgba(30, 71, 49, 0.11);
+}
+
+.app-config-geo-main-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.app-config-geo-config-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.app-config-geo-map-col {
+  min-width: 0;
+}
+
+.app-config-cards--skeleton .app-config-card--skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-config-skeleton {
+  border-radius: 0.55rem;
+  background: linear-gradient(90deg, #e8ede9 18%, #f5f8f5 50%, #e8ede9 82%);
+  background-size: 220% 100%;
+  animation: app-config-skeleton-shimmer 1.25s linear infinite;
+}
+
+.app-config-skeleton--title {
+  height: 26px;
+  width: 62%;
+}
+
+.app-config-skeleton--text {
+  height: 14px;
+  width: 100%;
+}
+
+.app-config-skeleton--short {
+  width: 74%;
+}
+
+.app-config-skeleton--input {
+  height: 52px;
+  width: 100%;
+}
+
+.app-config-skeleton--range {
+  height: 34px;
+  width: 100%;
+}
+
+.app-config-skeleton--button {
+  height: 46px;
+  width: 100%;
+}
+
+.app-config-skeleton--placeholder {
+  height: 72px;
+  width: 100%;
+}
+
+@keyframes app-config-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+.app-config-card--hours {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-config-card--hours::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, rgba(22, 163, 74, 0.08), transparent 58%);
+  pointer-events: none;
+}
+
+.app-config-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
 }
 
 .app-config-card h3 {
-  font-size: 0.95rem;
-  color: #15803d;
+  margin: 0;
+  font-size: 1rem;
+  color: #13653a;
 }
 
-.app-config-card p {
+.app-config-badge {
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.23rem 0.55rem;
+  background: #e4f7ea;
+  color: #14532d;
+}
+
+.app-config-description {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #5f6f60;
+  line-height: 1.4;
+}
+
+.app-config-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.app-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   font-size: 0.82rem;
-  color: #4b5563;
+  color: #33493b;
 }
 
-.app-config-card input,
-.app-config-card select,
-.app-config-card button {
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.9rem;
-}
-
-.app-config-card button {
-  background: #16a34a;
-  color: #ffffff;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.app-config-form input,
-.app-config-form textarea,
-.app-config-form button {
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
+.app-config-field input {
+  border: 1px solid #c9d8cc;
+  border-radius: 0.65rem;
   padding: 0.6rem 0.7rem;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+  background: #fff;
 }
 
-.app-config-form textarea {
-  min-height: 92px;
+.app-config-zones-textarea {
+  border: 1px solid #c9d8cc;
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  min-height: 145px;
   resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #fff;
 }
 
-.app-config-form button {
-  background: #16a34a;
-  color: #ffffff;
+.geo-map-shell {
+  border: 1px solid #d4e4d7;
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.geo-map-help {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+  color: #2f4a36;
+  background: #eef8f1;
+  border-bottom: 1px solid #d4e4d7;
+}
+
+.geo-map-tools {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #d4e4d7;
+  background: #f8fcf9;
+}
+
+.geo-map-tool-btn {
+  border: 1px solid #c9d8cc;
+  background: #ffffff;
+  color: #274133;
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.geo-map-tool-btn.is-active {
+  border-color: #16a34a;
+  background: #e9f9ef;
+  color: #166534;
+}
+
+.geo-map-canvas {
+  width: 100%;
+  height: 420px;
+}
+
+.app-config-zones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.app-config-zone-item {
+  border: 1px solid #d4e4d7;
+  border-radius: 0.8rem;
+  padding: 0.65rem;
+  background: #fcfefc;
+}
+
+.app-config-zone-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.55rem;
+}
+
+.app-config-zone-shape {
+  margin-left: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0f766e;
+  text-transform: uppercase;
+}
+
+.app-config-zone-remove {
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  background: #fff1f2;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-config-zone-remove:hover {
+  background: #ffe4e6;
+}
+
+.app-config-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #2b4533;
+  font-size: 0.86rem;
+}
+
+.app-config-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: #15803d;
+}
+
+.app-config-geo-box-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.app-config-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  font-size: 0.84rem;
+  color: #2f4235;
+}
+
+.app-config-warning {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.app-config-range-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.app-config-range-wrap input[type='range'] {
+  width: 100%;
+  accent-color: #16a34a;
+}
+
+.app-config-percent {
+  min-width: 66px;
+  text-align: center;
+  border-radius: 0.7rem;
+  border: 1px solid #c8e3cf;
+  background: #f2fbf5;
+  color: #166534;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.45rem 0.5rem;
+}
+
+.app-config-placeholder-box {
+  border: 1px dashed #d1dfd4;
+  border-radius: 0.75rem;
+  background: repeating-linear-gradient(
+    135deg,
+    #f7faf8,
+    #f7faf8 12px,
+    #f1f6f2 12px,
+    #f1f6f2 24px
+  );
+  color: #5a6d5e;
+  font-size: 0.84rem;
+  padding: 0.8rem;
+}
+
+.app-config-card button {
+  border: none;
+  border-radius: 0.7rem;
+  padding: 0.62rem 0.82rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-config-card button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px rgba(21, 128, 61, 0.23);
+}
+
+.app-config-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+.app-config-success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.7rem;
 }
 
 .app-config-error {
@@ -102,7 +411,7 @@
   background: #fef2f2;
   color: #991b1b;
   padding: 0.65rem 0.8rem;
-  border-radius: 0.5rem;
+  border-radius: 0.7rem;
 }
 
 .app-config-loading {
@@ -110,49 +419,28 @@
   font-weight: 600;
 }
 
-.app-config-table-wrap {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  background: #ffffff;
-  overflow: auto;
-}
-
-.app-config-table-wrap table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 800px;
-}
-
-.app-config-table-wrap th,
-.app-config-table-wrap td {
-  border-bottom: 1px solid #e5e7eb;
-  padding: 0.6rem 0.7rem;
-  text-align: left;
-  font-size: 0.85rem;
-  vertical-align: top;
-}
-
-.app-config-table-wrap th {
-  position: sticky;
-  top: 0;
-  background: #f8fafc;
-  z-index: 1;
-}
-
-.app-config-table-wrap pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 0.78rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
 @media (max-width: 900px) {
   .app-config-content {
     padding: 0.75rem;
   }
 
-  .app-config-cards {
+  .app-config-time-grid {
     grid-template-columns: 1fr;
+  }
+
+  .app-config-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-config-geo-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-config-geo-box-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .geo-map-canvas {
+    height: 280px;
   }
 }

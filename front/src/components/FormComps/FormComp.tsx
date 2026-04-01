@@ -24,7 +24,7 @@ import MiniMapPreview from "./MiniMapPreview";
 import { REQUEST_STATE } from '../../shared/constants';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
-import { getClockConfig } from '../../services/appConfigService';
+import { getClockConfig, validateRequestLocationCoverage } from '../../services/appConfigService';
 
 interface Material {
   id: number;
@@ -54,6 +54,7 @@ const FormComp: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false); // Estado para geolocalización en progreso
+  const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<RequestFormState>({
@@ -71,6 +72,7 @@ const FormComp: React.FC = () => {
   // Estados para el mapa - ahora con dirección
   const [showMap, setShowMap] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [locationValidationError, setLocationValidationError] = useState<string | null>(null);
 
   // Estados para horarios permitidos del sistema
   const [allowedStartHour, setAllowedStartHour] = useState('08:00');
@@ -179,6 +181,32 @@ const FormComp: React.FC = () => {
     };
 
     fetchMaterials();
+  }, []);
+
+  useEffect(() => {
+    const updateMobileCameraSupport = () => {
+      const hasNavigator = typeof navigator !== 'undefined';
+      const hasWindow = typeof window !== 'undefined';
+
+      if (!hasNavigator || !hasWindow) {
+        setMobileCameraEnabled(false);
+        return;
+      }
+
+      const ua = navigator.userAgent.toLowerCase();
+      const mobileUserAgent = /android|iphone|ipad|ipod|mobile/.test(ua);
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const narrowViewport = window.matchMedia('(max-width: 900px)').matches;
+
+      setMobileCameraEnabled(mobileUserAgent || (coarsePointer && narrowViewport));
+    };
+
+    updateMobileCameraSupport();
+    window.addEventListener('resize', updateMobileCameraSupport);
+
+    return () => {
+      window.removeEventListener('resize', updateMobileCameraSupport);
+    };
   }, []);
 
   // Limpiar URLs de vista previa cuando el componente se desmonta
@@ -313,10 +341,45 @@ const FormComp: React.FC = () => {
     setShowMap(true);
   };
 
+  const triggerFileInput = (inputId: string) => {
+    const input = document.getElementById(inputId) as HTMLInputElement | null;
+    input?.click();
+  };
+
+  const validateCoverageAndNotify = async (lat: number, lng: number): Promise<boolean> => {
+    try {
+      const validation = await validateRequestLocationCoverage(lat, lng);
+      if (!validation.allowed) {
+        const message = validation.message || 'Lo lamentamos, GreenBit aun no se encuentra disponible en esta zona';
+        setLocationValidationError(message);
+        setMensaje(message);
+        return false;
+      }
+
+      if (locationValidationError) {
+        setMensaje('');
+      }
+      setLocationValidationError(null);
+      return true;
+    } catch (error) {
+      const validationError = 'No se pudo validar la cobertura geografica en este momento.';
+      setLocationValidationError(validationError);
+      setMensaje(validationError);
+      return false;
+    }
+  };
+
   // Función para seleccionar ubicación con dirección
-  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
+  const handleLocationSelect = async (lat: number, lng: number, address?: string) => {
+    const allowed = await validateCoverageAndNotify(lat, lng);
+    // Cerramos modal tras marcar para mostrar feedback inmediato en el formulario.
+    setShowMap(false);
+
+    if (!allowed) {
+      return;
+    }
+
     setSelectedLocation({ lat, lng, address });
-    setShowMap(false); // Siempre cierra el modal
   };
 
   /**
@@ -366,6 +429,11 @@ const FormComp: React.FC = () => {
           const addressString =
             parts.length > 0 ? parts.join(', ') : 'Ubicación actual';
 
+          const allowed = await validateCoverageAndNotify(lat, lng);
+          if (!allowed) {
+            return;
+          }
+
           // Actualizar ubicación
           setSelectedLocation({ lat, lng, address: addressString });
           
@@ -380,6 +448,11 @@ const FormComp: React.FC = () => {
             timer: 2500
           });
         } catch (error) {
+          const allowed = await validateCoverageAndNotify(lat, lng);
+          if (!allowed) {
+            return;
+          }
+
           // Actualizar ubicación sin dirección
           setSelectedLocation({ lat, lng, address: 'Ubicación actual' });
           
@@ -478,6 +551,10 @@ const FormComp: React.FC = () => {
       errors.push("Debes seleccionar la ubicación donde pueden recoger el material");
     }
 
+    if (locationValidationError) {
+      errors.push(locationValidationError);
+    }
+
     return errors;
   };
 
@@ -537,6 +614,14 @@ const FormComp: React.FC = () => {
       }
 
       const user = JSON.parse(userStr);
+
+      if (selectedLocation) {
+        const allowed = await validateCoverageAndNotify(selectedLocation.lat, selectedLocation.lng);
+        if (!allowed) {
+          setSubmitting(false);
+          return;
+        }
+      }
 
       // Construir FormData según contrato API exacto
       const formDataToSend = buildAPIFormData(user);
@@ -694,15 +779,40 @@ const FormComp: React.FC = () => {
                 accept="image/*" 
                 onChange={handlePhotoChange} 
                 className="file-input" 
-                id="photo-upload"
+                id="photo-gallery-upload"
                 disabled={formData.photos.length >= 5}
               />
-              <label 
-                htmlFor="photo-upload" 
-                className={`upload-label ${formData.photos.length >= 5 ? 'upload-disabled' : ''}`}
-              >
-                {formData.photos.length >= 5 ? 'Límite alcanzado' : 'Subir fotos'}
-              </label>
+              {mobileCameraEnabled && (
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="file-input"
+                  id="photo-camera-upload"
+                  disabled={formData.photos.length >= 5}
+                />
+              )}
+              <div className="upload-actions">
+                <button
+                  type="button"
+                  className={`upload-label ${formData.photos.length >= 5 ? 'upload-disabled' : ''}`}
+                  onClick={() => triggerFileInput('photo-gallery-upload')}
+                  disabled={formData.photos.length >= 5}
+                >
+                  Abrir galería
+                </button>
+                {mobileCameraEnabled && (
+                  <button
+                    type="button"
+                    className={`upload-label upload-label-camera ${formData.photos.length >= 5 ? 'upload-disabled' : ''}`}
+                    onClick={() => triggerFileInput('photo-camera-upload')}
+                    disabled={formData.photos.length >= 5}
+                  >
+                    Tomar foto
+                  </button>
+                )}
+              </div>
               
               <div className="photo-count-container">
                 {formData.photos.length > 0 && (
@@ -783,6 +893,9 @@ const FormComp: React.FC = () => {
                     Cambiar ubicación
                   </button>
                 </div>
+              )}
+              {locationValidationError && (
+                <div className="alert alert-danger mt-2 mb-0">{locationValidationError}</div>
               )}
             </div>
 

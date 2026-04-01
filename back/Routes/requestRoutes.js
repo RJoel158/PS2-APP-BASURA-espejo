@@ -8,7 +8,8 @@ import {
   updateRequestState,
   upload,
   getRequestWithSchedule,
-  getRequestsByUserAndState
+  getRequestsByUserAndState,
+  validateRequestLocation
 } from '../Controllers/requestController.js';
 
 const router = express.Router();
@@ -24,6 +25,9 @@ router.get('/user/:userId', getUserRequests);
 
 // Obtener requests por usuario y estado
 router.get('/user/:userId/state', getRequestsByUserAndState);
+
+// Validar si una coordenada esta en zona permitida para solicitudes
+router.get('/validate-location', validateRequestLocation);
 
 // Obtener solicitud por ID
 router.get('/:id', getRequestById);

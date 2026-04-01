@@ -9,6 +9,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { evaluateCoverageByCoordinates } from '../Services/geofenceService.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -115,6 +116,15 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "ID de material requerido y debe ser válido"
+      });
+    }
+
+    const coverageValidation = await evaluateCoverageByCoordinates(latitude, longitude);
+    if (!coverageValidation.allowed) {
+      return res.status(400).json({
+        success: false,
+        error: coverageValidation.message,
+        code: coverageValidation.code,
       });
     }
 
@@ -682,5 +692,25 @@ export const getRequestsByUserAndState = async (req, res) => {
   } catch (err) {
     console.error("[ERROR] getRequestsByUserAndState:", err.message);
     res.status(500).json({ success: false, error: "Error al obtener requests del usuario" });
+  }
+};
+
+export const validateRequestLocation = async (req, res) => {
+  try {
+    const latitude = req.query.latitude ?? req.query.lat;
+    const longitude = req.query.longitude ?? req.query.lng;
+
+    const result = await evaluateCoverageByCoordinates(latitude, longitude);
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[ERROR] validateRequestLocation:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'No se pudo validar la zona de cobertura.'
+    });
   }
 };

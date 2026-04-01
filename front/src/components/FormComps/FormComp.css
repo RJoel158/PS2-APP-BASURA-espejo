@@ -163,9 +163,32 @@
   transition: all 0.2s;
 }
 
+.upload-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.upload-label-camera {
+  background: var(--verde-principal);
+}
+
+.upload-label.upload-disabled {
+  background: #b6b6b6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .upload-label:hover {
   background: var(--verde-principal);
   transform: translateY(-1px);
+}
+
+.upload-label:disabled {
+  background: #b6b6b6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .photo-count {

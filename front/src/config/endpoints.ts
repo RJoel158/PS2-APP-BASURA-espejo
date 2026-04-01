@@ -70,6 +70,7 @@ export const API_ENDPOINTS = {
   REQUESTS: {
     CREATE: '/api/request',                                      // POST - Crear solicitud
     GET_ALL: '/api/request',                                     // GET - Obtener todas
+    VALIDATE_LOCATION: '/api/request/validate-location',         // GET - Validar coordenadas en cobertura
     GET_BY_ID: (requestId: number) => `/api/request/${requestId}`,           // GET - Por ID
     GET_BY_USER_STATE: (userId: number) => `/api/request/user/${userId}/state`, // GET - Por usuario y estado
     UPDATE_STATE: (requestId: number) => `/api/request/${requestId}/state`,     // PUT - Actualizar estado
