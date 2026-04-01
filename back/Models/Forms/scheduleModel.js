@@ -91,6 +91,50 @@ export const getByRequestId = async (request_id) => {
 };
 
 /**
+ * Obtener horarios por múltiples IDs de solicitud
+ */
+export const getByRequestIds = async (requestIds = []) => {
+  try {
+    if (!Array.isArray(requestIds) || requestIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = requestIds.map(() => '?').join(',');
+    let rows;
+
+    try {
+      [rows] = await db.query(
+        `SELECT id, startHour, endHour, monday, tuesday, wednesday,
+                thursday, friday, saturday, sunday, requestId
+         FROM schedule
+         WHERE requestId IN (${placeholders}) AND state = 1
+         ORDER BY requestId ASC, id DESC`,
+        requestIds
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [rows] = await db.query(
+        `SELECT id, startHour, endHour, monday, tuesday, wednesday,
+                thursday, friday, saturday, sunday, requestId
+         FROM schedule
+         WHERE requestId IN (${placeholders})
+         ORDER BY requestId ASC, id DESC`,
+        requestIds
+      );
+    }
+
+    return rows;
+  } catch (err) {
+    console.error('[ERROR] ScheduleModel.getByRequestIds:', {
+      requestIdsCount: requestIds.length,
+      message: err.message,
+      stack: err.stack,
+    });
+    throw err;
+  }
+};
+
+/**
  * Obtener horario por ID
  */
 export const getById = async (id) => {

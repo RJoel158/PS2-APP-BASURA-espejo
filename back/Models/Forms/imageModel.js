@@ -125,6 +125,48 @@ export const getByRequestId = async (idRequest) => {
 };
 
 /**
+ * Obtener imágenes por múltiples IDs de solicitud
+ */
+export const getByRequestIds = async (requestIds = []) => {
+  try {
+    if (!Array.isArray(requestIds) || requestIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = requestIds.map(() => '?').join(',');
+    let rows;
+
+    try {
+      [rows] = await db.query(
+        `SELECT id, idRequest, image, uploadedDate
+         FROM image
+         WHERE idRequest IN (${placeholders}) AND state = 1
+         ORDER BY idRequest ASC, uploadedDate ASC`,
+        requestIds
+      );
+    } catch (innerErr) {
+      if (innerErr?.code !== 'ER_BAD_FIELD_ERROR') throw innerErr;
+      [rows] = await db.query(
+        `SELECT id, idRequest, image, uploadedDate
+         FROM image
+         WHERE idRequest IN (${placeholders})
+         ORDER BY idRequest ASC, uploadedDate ASC`,
+        requestIds
+      );
+    }
+
+    return rows;
+  } catch (err) {
+    console.error('[ERROR] ImageModel.getByRequestIds:', {
+      requestIdsCount: requestIds.length,
+      message: err.message,
+      stack: err.stack,
+    });
+    throw err;
+  }
+};
+
+/**
  * Obtener imagen por ID
  */
 export const getById = async (id) => {

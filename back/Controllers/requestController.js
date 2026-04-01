@@ -273,21 +273,34 @@ export const getAllRequests = async (req, res) => {
     
     console.log("[DEBUG] getAllRequests - Requests found:", { count: requests.length, states: requests.map(r => ({ id: r.id, state: r.state })) });
     
-    // Obtener imágenes y horarios para cada solicitud
-    const requestsWithDetails = await Promise.all(
-      requests.map(async (request) => {
-        const [images, schedule] = await Promise.all([
-          ImageModel.getByRequestId(request.id),
-          ScheduleModel.getByRequestId(request.id)
-        ]);
-        
-        return {
-          ...request,
-          images,
-          schedule
-        };
-      })
-    );
+    const requestIds = requests.map((request) => request.id);
+
+    // Reducir picos de conexiones remotas: 2 consultas batch en vez de N*2
+    const [allImages, allSchedules] = await Promise.all([
+      ImageModel.getByRequestIds(requestIds),
+      ScheduleModel.getByRequestIds(requestIds),
+    ]);
+
+    const imagesByRequestId = allImages.reduce((acc, image) => {
+      if (!acc[image.idRequest]) {
+        acc[image.idRequest] = [];
+      }
+      acc[image.idRequest].push(image);
+      return acc;
+    }, {});
+
+    const schedulesByRequestId = allSchedules.reduce((acc, schedule) => {
+      if (!acc[schedule.requestId]) {
+        acc[schedule.requestId] = schedule;
+      }
+      return acc;
+    }, {});
+
+    const requestsWithDetails = requests.map((request) => ({
+      ...request,
+      images: imagesByRequestId[request.id] || [],
+      schedule: schedulesByRequestId[request.id] || null,
+    }));
     
     console.log("[DEBUG] getAllRequests - Returning:", { count: requestsWithDetails.length });
     

@@ -25,6 +25,7 @@ import { REQUEST_STATE } from '../../shared/constants';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
 import { getClockConfig, validateRequestLocationCoverage } from '../../services/appConfigService';
+import ImagePreviewLightbox from '../CommonComp/ImagePreviewLightbox';
 
 interface Material {
   id: number;
@@ -55,6 +56,8 @@ const FormComp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false); // Estado para geolocalización en progreso
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
+  const [submitStage, setSubmitStage] = useState('Preparando solicitud...');
   const [mensaje, setMensaje] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<RequestFormState>({
@@ -603,6 +606,8 @@ const FormComp: React.FC = () => {
     }
 
     setSubmitting(true);
+    setSubmitProgress(8);
+    setSubmitStage('Validando datos del formulario...');
     setMensaje("");
 
     try {
@@ -614,6 +619,8 @@ const FormComp: React.FC = () => {
       }
 
       const user = JSON.parse(userStr);
+      setSubmitProgress(22);
+      setSubmitStage('Validando cobertura de ubicación...');
 
       if (selectedLocation) {
         const allowed = await validateCoverageAndNotify(selectedLocation.lat, selectedLocation.lng);
@@ -624,16 +631,33 @@ const FormComp: React.FC = () => {
       }
 
       // Construir FormData según contrato API exacto
+      setSubmitProgress(40);
+      setSubmitStage('Preparando imágenes y disponibilidad...');
       const formDataToSend = buildAPIFormData(user);
+
+      setSubmitProgress(62);
+      setSubmitStage('Enviando solicitud al servidor...');
+
+      const progressTicker = window.setInterval(() => {
+        setSubmitProgress((prev) => Math.min(prev + 4, 92));
+      }, 350);
 
       console.log("Enviando solicitud POST /api/request con FormData...");
       console.log("Validación pasada: ✓ (Contrato API completo)");
 
-      const response = await api.post(API_ENDPOINTS.REQUESTS.CREATE, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      let response;
+      try {
+        response = await api.post(API_ENDPOINTS.REQUESTS.CREATE, formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } finally {
+        window.clearInterval(progressTicker);
+      }
+
+      setSubmitProgress(100);
+      setSubmitStage('Solicitud registrada correctamente.');
 
       console.log("Respuesta API:", {
         status: response.status,
@@ -826,28 +850,39 @@ const FormComp: React.FC = () => {
               {/* Vista previa de las fotos */}
               {photoPreviewUrls.length > 0 && (
                 <div className="photo-preview-container">
-                  {photoPreviewUrls.map((url, index) => (
-                    <div key={index} className="photo-preview">
-                      <img 
-                        src={url} 
-                        alt={`Vista previa ${index + 1}`} 
-                        className="preview-image"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="remove-photo-button"
-                        aria-label={`Eliminar foto ${index + 1}`}
-                      >
-                        ✕
-                      </button>
-                      <div className="photo-info">
-                        <span className="photo-name">
-                          {formData.photos[index]?.name || `Imagen ${index + 1}`}
-                        </span>
+                  {(() => {
+                    const formGallery = photoPreviewUrls.map((url, galleryIndex) => ({
+                      previewSrc: url,
+                      fullSrc: url,
+                      alt: `Vista previa ${galleryIndex + 1}`,
+                    }));
+
+                    return photoPreviewUrls.map((url, index) => (
+                      <div key={index} className="photo-preview">
+                        <ImagePreviewLightbox
+                          previewSrc={url}
+                          fullSrc={url}
+                          alt={`Vista previa ${index + 1}`}
+                          className="preview-image"
+                          gallery={formGallery}
+                          startIndex={index}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="remove-photo-button"
+                          aria-label={`Eliminar foto ${index + 1}`}
+                        >
+                          ✕
+                        </button>
+                        <div className="photo-info">
+                          <span className="photo-name">
+                            {formData.photos[index]?.name || `Imagen ${index + 1}`}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               )}
             </div>
@@ -1015,6 +1050,23 @@ const FormComp: React.FC = () => {
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {submitting && (
+        <div className="submission-overlay" role="status" aria-live="polite">
+          <div className="submission-overlay-card">
+            <div className="submission-overlay-spinner" />
+            <h3>Procesando tu solicitud</h3>
+            <p>{submitStage}</p>
+            <div className="submission-progress-track">
+              <div
+                className="submission-progress-fill"
+                style={{ width: `${submitProgress}%` }}
+              />
+            </div>
+            <span className="submission-progress-text">{submitProgress}%</span>
           </div>
         </div>
       )}

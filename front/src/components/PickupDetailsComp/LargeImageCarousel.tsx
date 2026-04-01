@@ -1,4 +1,5 @@
 import React from 'react';
+import ImagePreviewLightbox from '../CommonComp/ImagePreviewLightbox';
 
 interface LargeImageCarouselProps {
   images: Array<{ id?: number; image: string }>;
@@ -23,6 +24,12 @@ const LargeImageCarousel: React.FC<LargeImageCarouselProps> = ({ images, apiUrl 
       </div>
     );
   }
+
+  const galleryImages = images.map((image, index) => ({
+    previewSrc: `${apiUrl}${image.image}`,
+    fullSrc: `${apiUrl}${image.image}`,
+    alt: `Material para reciclar ${index + 1}`,
+  }));
 
   return (
     <div style={{ margin: '2rem 0' }}>
@@ -66,18 +73,12 @@ const LargeImageCarousel: React.FC<LargeImageCarouselProps> = ({ images, apiUrl 
               e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15)';
             }}
           >
-            <img 
-              src={`${apiUrl}${image.image}`}
+            <ImagePreviewLightbox
+              previewSrc={`${apiUrl}${image.image}`}
+              fullSrc={`${apiUrl}${image.image}`}
               alt={`Material para reciclar ${index + 1}`}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block'
-              }}
-              onError={(e: any) => {
-                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbiBubyBkaXNwb25pYmxlPC90ZXh0Pjwvc3ZnPg==';
-              }}
+              gallery={galleryImages}
+              startIndex={index}
             />
           </div>
         ))}

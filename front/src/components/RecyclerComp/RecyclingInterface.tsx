@@ -7,6 +7,7 @@ import RequestAndAppoint from "./request_&_appoint";
 import ChangePasswordModal from "../PasswordComp/ChangePasswordModal";
 import AnnouncementBanner from "../CommonComp/AnnouncementBanner";
 import Footer from "../HomeComps/Footer";
+import { fetchUnreadCount } from "../../services/notificationService";
 
 interface Recycler {
   id: number;
@@ -36,6 +37,7 @@ const RecyclingInterface: React.FC = () => {
   const [recyclers, setRecyclers] = useState<Recycler[]>([]);
   const [periodState, setPeriodState] = useState<'activo' | 'cerrado' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showTopRecyclers, setShowTopRecyclers] = useState<boolean>(true);
   const [showHowTo, setShowHowTo] = useState<boolean>(true);
   const navigate = useNavigate();
@@ -94,6 +96,20 @@ const RecyclingInterface: React.FC = () => {
     }
     fetchTop();
   }, [navigate]);
+
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      if (!user?.id) {
+        setUnreadCount(0);
+        return;
+      }
+
+      const count = await fetchUnreadCount(user.id);
+      setUnreadCount(count);
+    };
+
+    void loadUnreadCount();
+  }, [user?.id, location.pathname]);
 
   if (!user) return null;
 
@@ -242,7 +258,10 @@ const RecyclingInterface: React.FC = () => {
           className={`mobile-nav-item ${location.pathname === '/notifications' ? 'active' : ''}`}
           onClick={() => navigate('/notifications')}
         >
-          <i className="bi bi-bell"></i>
+          <span className="mobile-nav-icon-wrap">
+            <i className="bi bi-bell"></i>
+            {unreadCount > 0 && <span className="mobile-nav-notification-alert">!</span>}
+          </span>
           <span>Notificaciones</span>
         </button>
 

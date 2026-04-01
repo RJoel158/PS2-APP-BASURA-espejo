@@ -5,6 +5,7 @@ import {
   connectNotifications,
   disconnectNotifications,
   onNotificationReceived,
+  offNotificationReceived,
   fetchNotifications,
   fetchUnreadCount,
   markAsRead,
@@ -33,15 +34,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
     // Conectar Socket.IO
     connectNotifications(userId);
 
-    // Escuchar notificaciones en tiempo real
-    onNotificationReceived((notification: Notification) => {
+    const handleIncomingNotification = (notification: Notification) => {
       console.log('[NotificationBell] Nueva notificación recibida:', notification);
       setNotifications(prev => [notification, ...prev]);
       setUnreadCount(prev => prev + 1);
-      
-      // Mostrar notificación toast (opcional)
       showNotificationToast(notification);
-    });
+    };
+
+    // Escuchar notificaciones en tiempo real
+    onNotificationReceived(handleIncomingNotification);
 
     // Cargar notificaciones existentes
     loadNotifications();
@@ -49,6 +50,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
 
     // Cleanup al desmontar
     return () => {
+      offNotificationReceived(handleIncomingNotification);
       disconnectNotifications();
     };
   }, [userId]);
@@ -105,6 +107,17 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
     } catch (error) {
       console.error('[NotificationBell] Error marking as read:', error);
     }
+  };
+
+  const handleViewDetails = (notification: Notification) => {
+    const url = getNavigationUrl(notification);
+    if (!url) return;
+
+    if (!notification.read) {
+      void handleMarkAsRead(notification.id);
+    }
+
+    navigate(url);
   };
 
   const toggleDropdown = () => {
@@ -260,12 +273,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                           {getNavigationUrl(notification) && (
                             <button
                               className="notification-btn notification-btn-secondary"
-                              onClick={() => {
-                                const url = getNavigationUrl(notification);
-                                if (url) {
-                                  navigate(url);
-                                }
-                              }}
+                              onClick={() => handleViewDetails(notification)}
                             >
                               Ver Detalles
                             </button>

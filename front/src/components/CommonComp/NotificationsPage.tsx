@@ -5,6 +5,7 @@ import {
   connectNotifications,
   disconnectNotifications,
   onNotificationReceived,
+  offNotificationReceived,
   fetchNotifications,
   markAsRead,
   type Notification,
@@ -130,15 +131,18 @@ const NotificationsPage: React.FC = () => {
     // Conectar Socket.IO
     connectNotifications(userId);
 
-    // Escuchar nuevas notificaciones
-    onNotificationReceived((notification: Notification) => {
+    const handleIncomingNotification = (notification: Notification) => {
       setNotifications(prev => [notification, ...prev]);
-    });
+    };
+
+    // Escuchar nuevas notificaciones
+    onNotificationReceived(handleIncomingNotification);
 
     // Cargar notificaciones
     loadNotifications();
 
     return () => {
+      offNotificationReceived(handleIncomingNotification);
       disconnectNotifications();
     };
   }, [userId, navigate]);
@@ -185,6 +189,17 @@ const NotificationsPage: React.FC = () => {
     } catch (error) {
       console.error('[NotificationsPage] Error marking as read:', error);
     }
+  };
+
+  const handleViewDetails = (notification: Notification) => {
+    const url = getNavigationUrl(notification);
+    if (!url) return;
+
+    if (!notification.read) {
+      void handleMarkAsRead(notification.id);
+    }
+
+    navigate(url);
   };
 
   const filteredNotifications = getFilteredNotifications();
@@ -308,12 +323,7 @@ const NotificationsPage: React.FC = () => {
                           {getNavigationUrl(notification) && (
                             <button
                               className="btn-ver-detalles"
-                              onClick={() => {
-                                const url = getNavigationUrl(notification);
-                                if (url) {
-                                  navigate(url);
-                                }
-                              }}
+                              onClick={() => handleViewDetails(notification)}
                             >
                               Ver Detalles
                             </button>

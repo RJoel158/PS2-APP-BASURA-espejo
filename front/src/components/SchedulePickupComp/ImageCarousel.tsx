@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './ImageCarousel.css';
 import { config } from '../../config/environment';
+import ImagePreviewLightbox from '../CommonComp/ImagePreviewLightbox';
 
 interface Image {
   id: number;
@@ -15,6 +16,21 @@ interface ImageCarouselProps {
 
 const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, altText = "Imagen de material reciclable" }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const resolveImageUrl = (imagePath: string): string => {
+    return imagePath.startsWith('/uploads')
+      ? `${config.api.baseUrl}${imagePath}`
+      : `${config.api.baseUrl}/uploads/images/${imagePath}`;
+  };
+
+  const galleryImages = images.map((image, index) => {
+    const src = resolveImageUrl(image.image);
+    return {
+      previewSrc: src,
+      fullSrc: src,
+      alt: `${altText} ${index + 1}`,
+    };
+  });
 
   // Debug logs (comentados para producción)
   // console.log('[INFO] ImageCarousel: Received images:', images);
@@ -38,18 +54,11 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, altText = "Imagen
 
   // Si solo hay una imagen, mostrarla sin controles
   if (images.length === 1) {
+    const imageSrc = resolveImageUrl(images[0].image);
+
     return (
       <div className="image-placeholder single-image">
-        <img 
-          src={images[0].image.startsWith('/uploads') 
-            ? `${config.api.baseUrl}${images[0].image}` 
-            : `${config.api.baseUrl}/uploads/images/${images[0].image}`}
-          alt={altText}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = '/placeholder-image.png'; // Imagen de fallback
-          }}
-        />
+        <ImagePreviewLightbox previewSrc={imageSrc} fullSrc={imageSrc} alt={altText} />
       </div>
     );
   }
@@ -70,19 +79,18 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, altText = "Imagen
     setCurrentIndex(index);
   };
 
+  const currentImageSrc = resolveImageUrl(images[currentIndex].image);
+
   return (
     <div className="image-carousel">
       <div className="carousel-container">
-        <img 
-          src={images[currentIndex].image.startsWith('/uploads') 
-            ? `${config.api.baseUrl}${images[currentIndex].image}` 
-            : `${config.api.baseUrl}/uploads/images/${images[currentIndex].image}`}
+        <ImagePreviewLightbox
+          previewSrc={currentImageSrc}
+          fullSrc={currentImageSrc}
           alt={`${altText} ${currentIndex + 1}`}
           className="carousel-image"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = '/placeholder-image.png'; // Imagen de fallback
-          }}
+          gallery={galleryImages}
+          startIndex={currentIndex}
         />
         
         {/* Controles de navegación */}

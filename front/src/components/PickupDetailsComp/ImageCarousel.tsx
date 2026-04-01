@@ -1,4 +1,5 @@
 import React from 'react';
+import ImagePreviewLightbox from '../CommonComp/ImagePreviewLightbox';
 
 interface ImageCarouselProps {
   images: Array<{ id?: number; image: string }>;
@@ -6,6 +7,12 @@ interface ImageCarouselProps {
 }
 
 const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, apiUrl }) => {
+  const galleryImages = images.map((image, index) => ({
+    previewSrc: `${apiUrl}${image.image}`,
+    fullSrc: `${apiUrl}${image.image}`,
+    alt: `Material para reciclar ${index + 1}`,
+  }));
+
   if (!images || images.length === 0) {
     return (
       <div className="no-images">
@@ -25,12 +32,12 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, apiUrl }) => {
             key={image.id || index}
             className="carousel-thumbnail"
           >
-            <img 
-              src={`${apiUrl}${image.image}`}
+            <ImagePreviewLightbox
+              previewSrc={`${apiUrl}${image.image}`}
+              fullSrc={`${apiUrl}${image.image}`}
               alt={`Material para reciclar ${index + 1}`}
-              onError={(e: any) => {
-                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5OL0E8L3RleHQ+PC9zdmc+';
-              }}
+              gallery={galleryImages}
+              startIndex={index}
             />
           </div>
         ))}

@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import fs from 'fs';
@@ -48,6 +49,9 @@ console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***configured***' : 'NOT 
 
 const app = express();
 const server = createServer(app);
+
+const FALLBACK_JWT_SECRET = 'greenbit-dev-insecure-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET || FALLBACK_JWT_SECRET;
 
 app.set('trust proxy', 1);
 
@@ -128,8 +132,59 @@ const io = new Server(server, {
   }
 });
 
-// Mapa para mantener usuarios conectados
-const connectedUsers = new Map();
+const getUserRoom = (userId) => `user:${String(userId)}`;
+
+const normalizeSocketUserId = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return String(parsed);
+};
+
+const parseCookieHeader = (cookieHeader = '') => {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return {};
+
+  return cookieHeader
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce((acc, entry) => {
+      const separatorIndex = entry.indexOf('=');
+      if (separatorIndex === -1) return acc;
+      const key = entry.slice(0, separatorIndex).trim();
+      const value = entry.slice(separatorIndex + 1).trim();
+      if (!key) return acc;
+      acc[key] = decodeURIComponent(value);
+      return acc;
+    }, {});
+};
+
+const extractHandshakeAccessToken = (socket) => {
+  const authTokenRaw = socket.handshake?.auth?.token;
+  if (typeof authTokenRaw === 'string' && authTokenRaw.trim()) {
+    return authTokenRaw.replace(/^Bearer\s+/i, '').trim();
+  }
+
+  const cookieHeader = socket.handshake?.headers?.cookie || '';
+  const cookies = parseCookieHeader(cookieHeader);
+  if (cookies.access_token) {
+    return cookies.access_token;
+  }
+
+  return null;
+};
+
+const getAuthenticatedSocketUserId = (socket) => {
+  const token = extractHandshakeAccessToken(socket);
+  if (!token) return null;
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { issuer: 'greenbit-api' });
+    return normalizeSocketUserId(payload?.id);
+  } catch {
+    return null;
+  }
+};
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
@@ -173,19 +228,42 @@ app.get('/api/db-status', async (req, res) => {
 // Configurar Socket.IO
 io.on('connection', (socket) => {
   console.log('[Socket.IO] Usuario conectado:', socket.id);
+  socket.authUserId = getAuthenticatedSocketUserId(socket);
+
+  if (socket.authUserId) {
+    const authRoom = getUserRoom(socket.authUserId);
+    socket.join(authRoom);
+    socket.userId = socket.authUserId;
+    console.log(`[Socket.IO] Socket autenticado para usuario ${socket.authUserId} en sala ${authRoom}`);
+  }
 
   // El cliente debe enviar su userId al conectarse
   socket.on('join', (userId) => {
-    if (userId) {
-      connectedUsers.set(userId, socket.id);
-      socket.userId = userId;
-      console.log(`[Socket.IO] Usuario ${userId} registrado con socket ${socket.id}`);
+    const normalizedUserId = normalizeSocketUserId(userId);
+    if (!normalizedUserId) {
+      console.warn(`[Socket.IO] Join ignorado para socket ${socket.id}: userId inválido (${userId})`);
+      return;
     }
+
+    if (socket.authUserId && socket.authUserId !== normalizedUserId) {
+      console.warn(`[Socket.IO] Join denegado para socket ${socket.id}: intentó userId ${normalizedUserId} distinto a autenticado ${socket.authUserId}`);
+      return;
+    }
+
+    const nextRoom = getUserRoom(normalizedUserId);
+    const previousRoom = socket.userId ? getUserRoom(socket.userId) : null;
+
+    if (previousRoom && previousRoom !== nextRoom) {
+      socket.leave(previousRoom);
+    }
+
+    socket.join(nextRoom);
+    socket.userId = normalizedUserId;
+    console.log(`[Socket.IO] Usuario ${normalizedUserId} unido a sala ${nextRoom} con socket ${socket.id}`);
   });
 
   socket.on('disconnect', () => {
     if (socket.userId) {
-      connectedUsers.delete(socket.userId);
       console.log(`[Socket.IO] Usuario ${socket.userId} desconectado`);
     }
   });
@@ -193,16 +271,23 @@ io.on('connection', (socket) => {
 
 // Función para enviar notificación en tiempo real
 export const sendRealTimeNotification = (userId, notification) => {
-  const socketId = connectedUsers.get(String(userId));
-  if (socketId) {
-    const socket = io.sockets.sockets.get(socketId);
-    if (socket) {
-      socket.emit('notification', notification);
-      console.log(`[Socket.IO] Notificación enviada a usuario ${userId}:`, notification.title);
-      return true;
-    }
+  const normalizedUserId = normalizeSocketUserId(userId);
+  if (!normalizedUserId) {
+    console.warn(`[Socket.IO] Envío omitido: userId inválido (${userId})`);
+    return false;
   }
-  console.log(`[Socket.IO] Usuario ${userId} no conectado`);
+
+  const room = getUserRoom(normalizedUserId);
+  const socketsInRoom = io.sockets.adapter.rooms.get(room);
+  const connectedSockets = socketsInRoom?.size || 0;
+
+  if (connectedSockets > 0) {
+    io.to(room).emit('notification', notification);
+    console.log(`[Socket.IO] Notificación enviada a usuario ${normalizedUserId} (${connectedSockets} socket(s)):`, notification.title);
+    return true;
+  }
+
+  console.log(`[Socket.IO] Usuario ${normalizedUserId} no conectado`);
   return false;
 };
 

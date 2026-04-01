@@ -18,26 +18,63 @@ export interface Notification {
 }
 
 let socket: Socket | null = null;
+let connectedUserId: number | null = null;
+let socketConsumers = 0;
 
 /**
  * Conectar usuario a Socket.IO para recibir notificaciones en tiempo real
  */
 export const connectNotifications = (userId: number): Socket => {
-  if (socket?.connected) {
+  if (socket && connectedUserId === userId) {
+    socketConsumers += 1;
+    if (socket.connected) {
+      socket.emit('join', userId);
+    }
     return socket;
+  }
+
+  if (socket && connectedUserId !== userId) {
+    socket.disconnect();
+    socket = null;
+    connectedUserId = null;
+    socketConsumers = 0;
   }
 
   socket = io(apiUrl(''), {
     transports: ['websocket', 'polling'],
+    withCredentials: true,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 10000,
+    timeout: 20000,
   });
+
+  connectedUserId = userId;
+  socketConsumers = 1;
 
   socket.on('connect', () => {
-    console.log('[NotificationService] Conectado a Socket.IO');
-    socket?.emit('join', userId);
+    console.log(`[NotificationService] Conectado a Socket.IO (socketId: ${socket?.id || 'n/a'})`);
+    socket?.emit('join', connectedUserId);
   });
 
-  socket.on('disconnect', () => {
-    console.log('[NotificationService] Desconectado de Socket.IO');
+  socket.on('reconnect_attempt', (attempt) => {
+    console.log(`[NotificationService] Reintentando conexión Socket.IO (#${attempt})`);
+  });
+
+  socket.on('reconnect', (attempt) => {
+    console.log(`[NotificationService] Reconectado a Socket.IO (#${attempt})`);
+    if (connectedUserId) {
+      socket?.emit('join', connectedUserId);
+    }
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('[NotificationService] Error de conexión Socket.IO:', error?.message || error);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[NotificationService] Desconectado de Socket.IO (${reason})`);
   });
 
   return socket;
@@ -47,9 +84,18 @@ export const connectNotifications = (userId: number): Socket => {
  * Desconectar de Socket.IO
  */
 export const disconnectNotifications = (): void => {
+  if (socketConsumers > 0) {
+    socketConsumers -= 1;
+  }
+
+  if (socketConsumers > 0) {
+    return;
+  }
+
   if (socket) {
     socket.disconnect();
     socket = null;
+    connectedUserId = null;
   }
 };
 
@@ -58,7 +104,17 @@ export const disconnectNotifications = (): void => {
  */
 export const onNotificationReceived = (callback: (notification: Notification) => void): void => {
   if (socket) {
+    socket.off('notification', callback);
     socket.on('notification', callback);
+  }
+};
+
+/**
+ * Dejar de escuchar notificaciones en tiempo real
+ */
+export const offNotificationReceived = (callback: (notification: Notification) => void): void => {
+  if (socket) {
+    socket.off('notification', callback);
   }
 };
 
