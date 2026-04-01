@@ -15,6 +15,20 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+const createGreenMarker = () => L.divIcon({
+  className: 'green-marker',
+  html: `<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16 0C7.17 0 0 7.17 0 16c0 8 16 24 16 24s16-16 16-24c0-8.83-7.17-16-16-16z" fill="white" stroke="white" stroke-width="2"/>
+    <path d="M16 2C8.27 2 2 8.27 2 16c0 6.83 14 20.5 14 20.5s14-13.67 14-20.5c0-7.73-6.27-14-14-14z" fill="#22c55e"/>
+    <circle cx="16" cy="14" r="4" fill="white"/>
+  </svg>`,
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
+  popupAnchor: [0, -40],
+});
+
+const pickupMarkerIcon = createGreenMarker();
+
 interface SimplePickupMapProps {
   center?: [number, number];
   markerPosition?: [number, number];
@@ -66,6 +80,7 @@ const SimplePickupMap: React.FC<SimplePickupMapProps> = ({
       }}
     >
       <MapContainer
+        ref={mapRef}
         center={markerPosition || center}
         zoom={14}
         style={{ 
@@ -88,7 +103,7 @@ const SimplePickupMap: React.FC<SimplePickupMapProps> = ({
           maxZoom={19}
         />
         {markerPosition && (
-          <Marker position={markerPosition} icon={DefaultIcon}>
+          <Marker position={markerPosition} icon={pickupMarkerIcon}>
             <Popup>{markerText}</Popup>
           </Marker>
         )}
