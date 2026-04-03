@@ -60,6 +60,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     onClose();
   };
 
+  const handleSuccessClose = () => {
+    setIsSuccessModalOpen(false);
+    handleClose();
+  };
+
   if (!isOpen && !isSuccessModalOpen) return null;
 
   return (
@@ -113,7 +118,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         <SuccessModal
           title="Recuperación de contraseña"
           message="Si el correo está registrado, recibirás una contraseña temporal en tu bandeja de entrada."
-          redirectUrl="/login"
+          onClose={handleSuccessClose}
         />
       )}
     </>

@@ -111,6 +111,15 @@ export class Validator {
     return this.normalizeSpaces(description);
   }
 
+  // Normaliza descripción 
+  static normalizeDescriptionSentenceCase(description: string): string {
+    const normalized = this.normalizeDescription(description);
+    if (!normalized) return "";
+
+    const lower = normalized.toLocaleLowerCase('es');
+    return lower.charAt(0).toLocaleUpperCase('es') + lower.slice(1);
+  }
+
   // Utilidad para saber si el objeto de errores está vacío
   static isValid(errors: Record<string, string>): boolean {
     return Object.values(errors).every((e) => e === "");

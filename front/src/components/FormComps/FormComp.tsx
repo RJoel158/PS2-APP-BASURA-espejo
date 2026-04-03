@@ -22,6 +22,7 @@ import './FormComp.css';
 import MapPopup from "./MapPopup";
 import MiniMapPreview from "./MiniMapPreview";
 import { REQUEST_STATE } from '../../shared/constants';
+import { Validator } from '../../common/Validator';
 import api from '../../services/api';
 import { API_ENDPOINTS } from '../../config/endpoints';
 import { getClockConfig, validateRequestLocationCoverage } from '../../services/appConfigService';
@@ -567,13 +568,14 @@ const FormComp: React.FC = () => {
    */
   const buildAPIFormData = (user: any): FormData => {
     const formDataToSend = new FormData();
+    const formattedDescription = Validator.normalizeDescriptionSentenceCase(formData.description);
 
     // User identification (from localStorage)
     formDataToSend.append('idUser', user.id.toString());
 
     // Material & Description (Step 1)
     formDataToSend.append('materialId', formData.materialId.toString());
-    formDataToSend.append('description', formData.description.trim());
+    formDataToSend.append('description', formattedDescription);
 
     // Location (Step 3 - Map)
     formDataToSend.append('latitude', selectedLocation!.lat.toString());

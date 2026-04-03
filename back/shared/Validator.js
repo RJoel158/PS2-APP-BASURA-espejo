@@ -162,6 +162,20 @@ export class Validator {
   }
 
   /**
+   * Normaliza una descripción en formato oración:
+   * primera letra en mayúscula y el resto en minúscula.
+   * @param {string} description - Descripción a normalizar
+   * @returns {string} - Descripción normalizada en sentence case
+   */
+  static normalizeDescriptionSentenceCase(description) {
+    const normalized = this.normalizeSpaces(description);
+    if (!normalized) return '';
+
+    const lower = normalized.toLocaleLowerCase('es');
+    return lower.charAt(0).toLocaleUpperCase('es') + lower.slice(1);
+  }
+
+  /**
    * Valida URL (acepta solo http/https)
    * @param {string} url - URL a validar
    * @param {boolean} required - Si la URL es obligatoria

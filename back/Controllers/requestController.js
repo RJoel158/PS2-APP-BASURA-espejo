@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { evaluateCoverageByCoordinates } from '../Services/geofenceService.js';
+import { Validator } from '../shared/Validator.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -83,6 +84,8 @@ export const createRequest = async (req, res) => {
       timeFrom,
       timeTo
     } = req.body;
+
+    const normalizedDescription = Validator.normalizeDescriptionSentenceCase(description);
     
     console.log("[INFO] createRequest controller called:", { 
       idUser, 
@@ -105,7 +108,7 @@ export const createRequest = async (req, res) => {
       });
     }
 
-    if (!description || typeof description !== 'string' || description.trim().length === 0) {
+    if (!description || typeof description !== 'string' || normalizedDescription.length === 0) {
       return res.status(400).json({
         success: false,
         error: "La descripción es requerida"
@@ -164,7 +167,7 @@ export const createRequest = async (req, res) => {
       const requestId = await RequestModel.create(
         conn,
         parseInt(idUser),
-        description.trim(),
+        normalizedDescription,
         parseInt(materialId),
         latitude ? parseFloat(latitude) : null,
         longitude ? parseFloat(longitude) : null,
