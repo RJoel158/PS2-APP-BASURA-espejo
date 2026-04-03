@@ -1,5 +1,5 @@
 import * as ScoreModel from '../Models/scoreModel.js';
-import { SCORE_CONSTANTS, isValidRating } from '../shared/constants.js';
+import { APPOINTMENT_STATE, SCORE_CONSTANTS, isValidRating } from '../shared/constants.js';
 
 /**
  * Crear una calificación
@@ -9,6 +9,8 @@ import { SCORE_CONSTANTS, isValidRating } from '../shared/constants.js';
 export const createScore = async (req, res) => {
   try {
     const { appointmentId, ratedByUserId, ratedToUserId, rating, comment } = req.body;
+    const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
+    const isComplaint = normalizedComment.toUpperCase().startsWith('[RECLAMO]');
 
     console.log('[INFO] scoreController.createScore - Request body:', req.body);
 
@@ -20,12 +22,37 @@ export const createScore = async (req, res) => {
       });
     }
 
-    // Validar rating si se proporciona
-    if (rating !== undefined && rating !== null) {
+    // Validar rating solo para flujo normal (no reclamo)
+    if (!isComplaint && rating !== undefined && rating !== null) {
       if (!isValidRating(rating)) {
         return res.status(400).json({
           success: false,
           error: `El rating debe ser un número entre ${SCORE_CONSTANTS.MIN_RATING} y ${SCORE_CONSTANTS.MAX_RATING}`
+        });
+      }
+    }
+
+    if (isComplaint) {
+      const appointmentState = await ScoreModel.getAppointmentStateById(appointmentId);
+
+      if (appointmentState === null) {
+        return res.status(404).json({
+          success: false,
+          error: 'Cita no encontrada para registrar reclamo'
+        });
+      }
+
+      if (appointmentState === APPOINTMENT_STATE.COMPLETED) {
+        return res.status(409).json({
+          success: false,
+          error: 'No puedes registrar un reclamo en una cita completada'
+        });
+      }
+
+      if (appointmentState !== APPOINTMENT_STATE.CANCELLED) {
+        return res.status(400).json({
+          success: false,
+          error: 'Los reclamos solo se permiten para citas canceladas'
         });
       }
     }
@@ -40,36 +67,53 @@ export const createScore = async (req, res) => {
           error: 'Ya has calificado esta cita'
         });
       } else {
-        // MODO UPSERT: Ya existe la fila de puntos base, actualizamos con el rating y comentario
-        await ScoreModel.updateScoreRating(appointmentId, ratedByUserId, rating, comment);
+        if (isComplaint) {
+          await ScoreModel.updateComplaintScore(appointmentId, ratedByUserId, normalizedComment || '[RECLAMO]');
+        } else {
+          // MODO UPSERT: Ya existe la fila de puntos base, actualizamos con el rating y comentario
+          await ScoreModel.updateScoreRating(appointmentId, ratedByUserId, rating, comment);
+        }
+
         return res.status(200).json({
           success: true,
           message: 'Calificación actualizada exitosamente',
           data: { 
             id: existingRow.id,
-            rating: rating || null,
-            scoreAwarded: parseInt(rating) // los puntos adicionales sumados
+            rating: isComplaint ? 1 : (rating || null),
+            scoreAwarded: isComplaint ? 1 : parseInt(rating) // reclamo fijo 1, rating normal suma adicional
           }
         });
       }
     }
 
-    // Crear calificación (rating puede ser null) - fallback por si no se creó la base
-    const scoreId = await ScoreModel.createScore(
-      appointmentId,
-      ratedByUserId,
-      ratedToUserId,
-      rating || null,
-      comment || null
-    );
+    let scoreId;
+    if (isComplaint) {
+      scoreId = await ScoreModel.createComplaintScore(
+        appointmentId,
+        ratedByUserId,
+        ratedToUserId,
+        normalizedComment || '[RECLAMO]'
+      );
+    } else {
+      // Crear calificación (rating puede ser null) - fallback por si no se creó la base
+      scoreId = await ScoreModel.createScore(
+        appointmentId,
+        ratedByUserId,
+        ratedToUserId,
+        rating || null,
+        comment || null
+      );
+    }
 
     res.status(201).json({
       success: true,
       message: 'Calificación creada exitosamente',
       data: { 
         id: scoreId,
-        rating: rating || null,
-        scoreAwarded: rating ? (SCORE_CONSTANTS.BASE_POINTS + parseInt(rating)) : SCORE_CONSTANTS.BASE_POINTS
+        rating: isComplaint ? 1 : (rating || null),
+        scoreAwarded: isComplaint
+          ? 1
+          : (rating ? (SCORE_CONSTANTS.BASE_POINTS + parseInt(rating)) : SCORE_CONSTANTS.BASE_POINTS)
       }
     });
   } catch (error) {
