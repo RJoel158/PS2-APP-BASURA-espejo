@@ -343,28 +343,36 @@ export const cancelAppointment = async (req, res) => {
 
         console.log(`[INFO] Sending notification to user ${notificationUserId} about cancellation by ${cancellerName}`);
 
-        // Crear notificación en BD
-        const notifId = await NotificationModel.createNotification(
-          notificationUserId,
-          notificationTitle,
-          notificationMessage,
-          "appointment_canceled",
-          parseInt(id),
-          appointment.idRequest,  // requestId
-          parseInt(id)            // appointmentId
+        // La notificación se crea por trigger en BD al cambiar estado de la cita.
+        // Para evitar duplicados, solo recuperamos la última creada y la emitimos en tiempo real.
+        const [notifications] = await db.query(
+          `SELECT id, type, title, body, requestId, appointmentId, \`read\`, createdAt
+           FROM notifications
+           WHERE userId = ?
+             AND appointmentId = ?
+             AND requestId = ?
+             AND type = 'appointment_canceled'
+           ORDER BY id DESC
+           LIMIT 1`,
+          [notificationUserId, parseInt(id), appointment.idRequest]
         );
 
-        console.log(`[INFO] Notification created in DB with ID: ${notifId}`);
+        if (!notifications || notifications.length === 0) {
+          console.warn(`[WARN] No trigger notification found for cancellation appointmentId=${id}, userId=${notificationUserId}`);
+          return;
+        }
 
-        // Enviar en tiempo real
+        const notification = notifications[0];
         const notificationData = {
-          id: notifId,
-          title: notificationTitle,
-          body: notificationMessage,
-          type: "appointment_canceled",
-          appointmentId: parseInt(id),
-          requestId: appointment.idRequest,
-          createdAt: new Date().toISOString()
+          id: notification.id,
+          title: notification.title || notificationTitle,
+          body: notification.body || notificationMessage,
+          type: notification.type,
+          appointmentId: notification.appointmentId,
+          requestId: notification.requestId,
+          read: Boolean(notification.read),
+          createdAt: notification.createdAt,
+          actorEmail: cancellerName,
         };
         
         console.log(`[INFO] Sending real-time notification:`, notificationData);
@@ -451,9 +459,12 @@ export const acceptAppointmentEndpoint = async (req, res) => {
         // Obtener la notificación recién creada por el trigger
         const [notifications] = await db.query(
           `SELECT * FROM notifications 
-           WHERE userId = ? AND appointmentId = ? AND type = 'appointment_accepted'
-           ORDER BY createdAt DESC LIMIT 1`,
-          [collectorId, parseInt(id)]
+           WHERE userId = ?
+             AND appointmentId = ?
+             AND requestId = ?
+             AND type = 'appointment_accepted'
+           ORDER BY id DESC LIMIT 1`,
+          [collectorId, parseInt(id), requestId]
         );
 
         if (notifications && notifications.length > 0) {
@@ -553,9 +564,12 @@ export const rejectAppointmentEndpoint = async (req, res) => {
         // Obtener la notificación recién creada por el trigger
         const [notifications] = await db.query(
           `SELECT * FROM notifications 
-           WHERE userId = ? AND appointmentId = ? AND type = 'appointment_rejected'
-           ORDER BY createdAt DESC LIMIT 1`,
-          [collectorId, parseInt(id)]
+           WHERE userId = ?
+             AND appointmentId = ?
+             AND requestId = ?
+             AND type = 'appointment_rejected'
+           ORDER BY id DESC LIMIT 1`,
+          [collectorId, parseInt(id), requestId]
         );
 
         if (notifications && notifications.length > 0) {
