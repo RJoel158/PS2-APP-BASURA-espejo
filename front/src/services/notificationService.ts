@@ -20,6 +20,7 @@ export interface Notification {
 let socket: Socket | null = null;
 let connectedUserId: number | null = null;
 let socketConsumers = 0;
+let lastTimeoutWarningAt = 0;
 
 /**
  * Conectar usuario a Socket.IO para recibir notificaciones en tiempo real
@@ -70,7 +71,30 @@ export const connectNotifications = (userId: number): Socket => {
   });
 
   socket.on('connect_error', (error) => {
+    const message = String(error?.message || error || '').toLowerCase();
+
+    if (message.includes('timeout')) {
+      const now = Date.now();
+      // Evita inundar la consola con el mismo warning en cada reintento.
+      if (now - lastTimeoutWarningAt > 30000) {
+        console.warn('[NotificationService] Socket.IO timeout: se reintentara automaticamente (polling REST sigue activo).');
+        lastTimeoutWarningAt = now;
+      }
+      return;
+    }
+
     console.error('[NotificationService] Error de conexión Socket.IO:', error?.message || error);
+  });
+
+  socket.on('reconnect_error', (error) => {
+    const message = String(error?.message || error || '').toLowerCase();
+    if (!message.includes('timeout')) {
+      console.warn('[NotificationService] Fallo de reconexión Socket.IO:', error?.message || error);
+    }
+  });
+
+  socket.on('reconnect_failed', () => {
+    console.warn('[NotificationService] No se pudo reconectar Socket.IO por ahora; continuando con consultas REST.');
   });
 
   socket.on('disconnect', (reason) => {
