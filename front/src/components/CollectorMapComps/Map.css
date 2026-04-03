@@ -522,6 +522,30 @@
   gap: 8px;
 }
 
+.map-my-location-btn {
+  position: absolute;
+  top: 58px;
+  right: 14px;
+  z-index: 1300;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 999px;
+  padding: 0.45rem 0.72rem;
+  background: rgba(239, 246, 255, 0.96);
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.14);
+}
+
+.map-my-location-btn:hover {
+  background: rgba(219, 234, 254, 0.98);
+}
+
+.map-my-location-btn:active {
+  transform: translateY(1px);
+}
+
 .filter-chip-grid.days {
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
 }
@@ -752,6 +776,15 @@
     padding: 0.42rem 0.75rem;
     font-size: 0.8rem;
     box-shadow: 0 8px 18px rgba(17, 24, 39, 0.28);
+  }
+
+  .map-my-location-btn {
+    top: auto;
+    bottom: 68px;
+    right: 12px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.77rem;
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.24);
   }
 
   .map-back-btn {

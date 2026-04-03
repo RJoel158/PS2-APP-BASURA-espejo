@@ -65,7 +65,7 @@ const ComplaintModal: React.FC<ComplaintModalProps> = ({
         ratedByUserId: currentUser.id,
         ratedToUserId,
         rating: 1, // Rating mínimo para reclamos (1 estrella)
-        comment: `[RECLAMO] ${complaint}`
+        comment: `[RECLAMO] ${complaint.trim()}`
       });
 
       setShowSuccessModal(true);

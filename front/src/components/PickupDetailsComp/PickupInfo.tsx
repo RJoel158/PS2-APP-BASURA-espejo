@@ -14,7 +14,7 @@ import ComplaintModal from '../ComplaintModalComp/ComplaintModal';
 import CheckModal from '../CommonComp/CheckModal';
 import ConfirmModal from '../CommonComp/ConfirmModal';
 import SuccessModal from '../CommonComp/SuccesModal';
-import { checkUserRated } from '../../services/scoreService';
+import { checkUserRated, getUserAverageRating } from '../../services/scoreService';
 
 interface PickupInfoProps {
   requestId?: string;
@@ -56,6 +56,15 @@ interface AppointmentData {
   recyclerNit?: string;
   collectorId?: number;
   recyclerId?: number;
+  collectorAverageRating?: number;
+  collectorTotalRatings?: number;
+  recyclerAverageRating?: number;
+  recyclerTotalRatings?: number;
+}
+
+interface UserRatingSummary {
+  averageRating: number;
+  totalRatings: number;
 }
 
 const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCancel, onLocationUpdate }) => {
@@ -83,6 +92,8 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
   const [shouldReloadOnSuccessClose, setShouldReloadOnSuccessClose] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [collectorRating, setCollectorRating] = useState<UserRatingSummary>({ averageRating: 0, totalRatings: 0 });
+  const [recyclerRating, setRecyclerRating] = useState<UserRatingSummary>({ averageRating: 0, totalRatings: 0 });
 
   // Obtener el usuario actual desde localStorage
   const getCurrentUser = () => {
@@ -244,6 +255,76 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
 
     checkRatingAndComplaintStatus();
   }, [appointmentData, appointmentId]);
+
+  useEffect(() => {
+    const fetchParticipantRatings = async () => {
+      if (!appointmentData) {
+        setCollectorRating({ averageRating: 0, totalRatings: 0 });
+        setRecyclerRating({ averageRating: 0, totalRatings: 0 });
+        return;
+      }
+
+      const hasCollectorAggregate = appointmentData.collectorAverageRating !== undefined
+        || appointmentData.collectorTotalRatings !== undefined;
+      const hasRecyclerAggregate = appointmentData.recyclerAverageRating !== undefined
+        || appointmentData.recyclerTotalRatings !== undefined;
+
+      if (hasCollectorAggregate || hasRecyclerAggregate) {
+        setCollectorRating({
+          averageRating: Number(appointmentData.collectorAverageRating || 0),
+          totalRatings: Number(appointmentData.collectorTotalRatings || 0)
+        });
+        setRecyclerRating({
+          averageRating: Number(appointmentData.recyclerAverageRating || 0),
+          totalRatings: Number(appointmentData.recyclerTotalRatings || 0)
+        });
+        return;
+      }
+
+      const collectorId = Number(appointmentData.collectorId);
+      const recyclerId = Number(appointmentData.recyclerId);
+
+      const [collectorResult, recyclerResult] = await Promise.all([
+        Number.isInteger(collectorId) && collectorId > 0
+          ? getUserAverageRating(collectorId)
+          : Promise.resolve({ averageRating: 0, totalRatings: 0 }),
+        Number.isInteger(recyclerId) && recyclerId > 0
+          ? getUserAverageRating(recyclerId)
+          : Promise.resolve({ averageRating: 0, totalRatings: 0 })
+      ]);
+
+      setCollectorRating({
+        averageRating: Number(collectorResult.averageRating || 0),
+        totalRatings: Number(collectorResult.totalRatings || 0)
+      });
+      setRecyclerRating({
+        averageRating: Number(recyclerResult.averageRating || 0),
+        totalRatings: Number(recyclerResult.totalRatings || 0)
+      });
+    };
+
+    fetchParticipantRatings();
+  }, [appointmentData]);
+
+  const renderRatingStars = (averageRating: number) => {
+    const normalizedRating = Math.max(0, Math.min(5, Number(averageRating) || 0));
+
+    return (
+      <span className="pickupdetail-stars" aria-label={`Calificacion ${normalizedRating.toFixed(1)} de 5`}>
+        {[1, 2, 3, 4, 5].map((starNumber) => {
+          const isFull = normalizedRating >= starNumber;
+          const isHalf = !isFull && normalizedRating >= starNumber - 0.5;
+          const className = isFull ? 'full' : isHalf ? 'half' : 'empty';
+
+          return (
+            <span key={starNumber} className={`pickupdetail-star ${className}`}>
+              ★
+            </span>
+          );
+        })}
+      </span>
+    );
+  };
 
   const handleCancelAppointment = async () => {
     if (!appointmentId) {
@@ -734,6 +815,12 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                   )}
                 </>
               )}
+              <div className="pickupdetail-rating-row">
+                {renderRatingStars(collectorRating.averageRating)}
+                <span className="pickupdetail-rating-text">
+                  {collectorRating.averageRating.toFixed(1)} ({collectorRating.totalRatings} calificaciones)
+                </span>
+              </div>
             </div>
             <div className="pickupdetail-info-block">
               <h3 className="pickupdetail-info-label">
@@ -762,6 +849,12 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
                   )}
                 </>
               )}
+              <div className="pickupdetail-rating-row">
+                {renderRatingStars(recyclerRating.averageRating)}
+                <span className="pickupdetail-rating-text">
+                  {recyclerRating.averageRating.toFixed(1)} ({recyclerRating.totalRatings} calificaciones)
+                </span>
+              </div>
             </div>
           </>
         ) : requestData ? (

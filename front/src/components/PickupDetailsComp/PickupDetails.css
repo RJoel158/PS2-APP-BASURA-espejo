@@ -217,6 +217,43 @@
   font-weight: 500;
 }
 
+.pickupdetail-rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.pickupdetail-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.08rem;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.pickupdetail-star {
+  color: #d1d5db;
+}
+
+.pickupdetail-star.full {
+  color: #f59e0b;
+}
+
+.pickupdetail-star.half {
+  background: linear-gradient(90deg, #f59e0b 50%, #d1d5db 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pickupdetail-rating-text {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
 .pickupdetail-cancel-button {
   margin-top: auto;
   width: 100%;

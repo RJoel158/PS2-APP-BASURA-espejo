@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { CircleMarker, MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Map.css';
@@ -11,27 +11,52 @@ import { API_ENDPOINTS } from '../../config/endpoints';
 import { config, apiUrl, debugLog } from '../../config/environment';
 import { REQUEST_STATE } from '../../shared/constants';
 
-// Crear marcador verde sencillo con reborde blanco
-const createGreenMarker = () => L.divIcon({
-  className: "green-marker",
-  html: `<svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Reborde blanco exterior -->
-    <path d="M16 0C7.17 0 0 7.17 0 16c0 8 16 24 16 24s16-16 16-24c0-8.83-7.17-16-16-16z" fill="white" stroke="white" stroke-width="2"/>
-    <!-- Pin verde interior -->
-    <path d="M16 2C8.27 2 2 8.27 2 16c0 6.83 14 20.5 14 20.5s14-13.67 14-20.5c0-7.73-6.27-14-14-14z" fill="#22c55e"/>
-    <!-- Punto central -->
-    <circle cx="16" cy="14" r="4" fill="white"/>
-  </svg>`,
-  iconSize: [32, 40],
-  iconAnchor: [16, 40],
-  popupAnchor: [0, -40],
-});
+const getMarkerScaleByZoom = (zoom: number): number => {
+  if (zoom <= 10) return 0.72;
+  if (zoom <= 12) return 0.85;
+  if (zoom <= 14) return 1;
+  return 1.12;
+};
 
-const recyclingIcon = createGreenMarker();
+const getUserDotRadiusByZoom = (zoom: number): number => {
+  if (zoom <= 10) return 5;
+  if (zoom <= 12) return 6;
+  if (zoom <= 14) return 7;
+  return 8;
+};
+
+const getUserAuraRadiusByZoom = (zoom: number, accuracyMeters: number | null): number => {
+  const base = zoom <= 10 ? 12 : zoom <= 12 ? 14 : zoom <= 14 ? 16 : 18;
+  const safeAccuracy = typeof accuracyMeters === 'number' && Number.isFinite(accuracyMeters)
+    ? accuracyMeters
+    : 40;
+  const accuracyFactor = Math.min(1.45, Math.max(0.85, safeAccuracy / 45));
+  return Math.round(Math.min(28, Math.max(10, base * accuracyFactor)));
+};
+
+// Crear marcador verde responsivo al zoom
+const createGreenMarker = (zoom: number) => {
+  const scale = getMarkerScaleByZoom(zoom);
+  const width = Math.round(32 * scale);
+  const height = Math.round(40 * scale);
+
+  return L.divIcon({
+    className: 'green-marker',
+    html: `<svg width="${width}" height="${height}" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 0C7.17 0 0 7.17 0 16c0 8 16 24 16 24s16-16 16-24c0-8.83-7.17-16-16-16z" fill="white" stroke="white" stroke-width="2"/>
+      <path d="M16 2C8.27 2 2 8.27 2 16c0 6.83 14 20.5 14 20.5s14-13.67 14-20.5c0-7.73-6.27-14-14-14z" fill="#22c55e"/>
+      <circle cx="16" cy="14" r="4" fill="white"/>
+    </svg>`,
+    iconSize: [width, height],
+    iconAnchor: [Math.round(width / 2), height],
+    popupAnchor: [0, -height],
+  });
+};
 
 // Crear icono para clusters (grupos de marcadores)
-const createClusterIcon = (count: number) => {
-  const size = count > 10 ? 50 : count > 5 ? 45 : 40;
+const createClusterIcon = (count: number, zoom: number) => {
+  const baseSize = count > 10 ? 50 : count > 5 ? 45 : 40;
+  const size = Math.max(30, Math.round(baseSize * getMarkerScaleByZoom(zoom)));
   const svgIcon = `
     <div class="cluster-marker" style="
       width: ${size}px; 
@@ -45,7 +70,7 @@ const createClusterIcon = (count: number) => {
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       font-weight: bold;
       color: white;
-      font-size: ${size > 45 ? '14px' : '12px'};
+      font-size: ${size >= 50 ? '14px' : '12px'};
     ">
       ${count}
     </div>
@@ -113,6 +138,73 @@ interface MapLocationState {
   favoriteMaterialIds?: number[];
 }
 
+interface MapViewportSyncProps {
+  onViewChange: (next: MapViewState) => void;
+}
+
+const MapViewportSync: React.FC<MapViewportSyncProps> = ({ onViewChange }) => {
+  useMapEvents({
+    zoomend: (e) => {
+      const map = e.target;
+      onViewChange({
+        zoom: map.getZoom(),
+        bounds: map.getBounds(),
+      });
+    },
+    moveend: (e) => {
+      const map = e.target;
+      onViewChange({
+        zoom: map.getZoom(),
+        bounds: map.getBounds(),
+      });
+    },
+  });
+
+  return null;
+};
+
+interface MapAutoCenterOnUserProps {
+  target: [number, number] | null;
+  autoCentered: boolean;
+  onAutoCentered: () => void;
+}
+
+const MapAutoCenterOnUser: React.FC<MapAutoCenterOnUserProps> = ({ target, autoCentered, onAutoCentered }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!target || autoCentered) {
+      return;
+    }
+
+    const targetZoom = Math.max(map.getZoom(), 13);
+    map.setView(target, targetZoom, { animate: false });
+    onAutoCentered();
+  }, [map, target, autoCentered, onAutoCentered]);
+
+  return null;
+};
+
+interface MapRecenterOnDemandProps {
+  target: [number, number] | null;
+  seq: number;
+}
+
+const MapRecenterOnDemand: React.FC<MapRecenterOnDemandProps> = ({ target, seq }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!target || seq === 0) {
+      return;
+    }
+
+    const targetZoom = Math.max(map.getZoom(), 14);
+    map.setView(target, targetZoom, { animate: false });
+  }, [map, target, seq]);
+
+  return null;
+};
+
 const DAY_TO_SCHEDULE_KEYS: Record<string, string[]> = {
   lun: ['lun', 'lunes', 'monday', 'Monday'],
   mar: ['mar', 'martes', 'tuesday', 'Tuesday'],
@@ -154,6 +246,10 @@ const RecyclingPointsMap: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [alreadyReportedCurrentRequest, setAlreadyReportedCurrentRequest] = useState(false);
   const [checkingReportStatus, setCheckingReportStatus] = useState(false);
+  const [currentUserLocation, setCurrentUserLocation] = useState<[number, number] | null>(null);
+  const [currentUserAccuracyMeters, setCurrentUserAccuracyMeters] = useState<number | null>(null);
+  const [hasAutoCenteredOnUserLocation, setHasAutoCenteredOnUserLocation] = useState(false);
+  const [recenterToUserSeq, setRecenterToUserSeq] = useState(0);
 
   // States para filtrado
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -166,6 +262,13 @@ const RecyclingPointsMap: React.FC = () => {
   const activeFilterCount =
     Number(filters.materialIds.length > 0 || hasFavoriteFilter) + Number(filters.days.length > 0);
   const hasActiveFilters = activeFilterCount > 0;
+
+  const recyclingIcon = useMemo(() => createGreenMarker(mapView.zoom), [mapView.zoom]);
+  const currentUserDotRadius = useMemo(() => getUserDotRadiusByZoom(mapView.zoom), [mapView.zoom]);
+  const currentUserAuraRadius = useMemo(
+    () => getUserAuraRadiusByZoom(mapView.zoom, currentUserAccuracyMeters),
+    [mapView.zoom, currentUserAccuracyMeters]
+  );
 
   const toggleMaterialFilter = (materialId: number) => {
     setFilters((prev) => {
@@ -375,28 +478,6 @@ const RecyclingPointsMap: React.FC = () => {
     }
 
     return filteredRequests;
-  };
-
-  // Componente para manejar eventos del mapa
-  const MapEventHandler: React.FC = () => {
-    useMapEvents({
-      zoomend: (e) => {
-        const map = e.target;
-        setMapView({
-          zoom: map.getZoom(),
-          bounds: map.getBounds()
-        });
-      },
-      moveend: (e) => {
-        const map = e.target;
-        setMapView({
-          zoom: map.getZoom(),
-          bounds: map.getBounds()
-        });
-      }
-    });
-
-    return null;
   };
 
   // Función para obtener materiales del backend
@@ -637,6 +718,29 @@ const RecyclingPointsMap: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!navigator.geolocation) {
+      debugLog('[WARN] Geolocalizacion no soportada por este navegador');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentUserLocation([position.coords.latitude, position.coords.longitude]);
+        setCurrentUserAccuracyMeters(position.coords.accuracy || null);
+      },
+      (geoError) => {
+        debugLog('[WARN] No se pudo obtener la ubicacion actual del usuario', geoError);
+        setCurrentUserAccuracyMeters(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 30000,
+      }
+    );
+  }, []);
+
+  useEffect(() => {
     if (!selectedRequest?.id) {
       setAlreadyReportedCurrentRequest(false);
       setCheckingReportStatus(false);
@@ -848,7 +952,6 @@ const RecyclingPointsMap: React.FC = () => {
     [recyclingRequests, filters, favoriteMaterialFilterIds]
   );
 
-
   if (loading) {
     return (
       <div className="recycling-points-container">
@@ -892,6 +995,17 @@ const RecyclingPointsMap: React.FC = () => {
             )}
           </button>
 
+          {currentUserLocation && (
+            <button
+              type="button"
+              className="map-my-location-btn"
+              onClick={() => setRecenterToUserSeq((prev) => prev + 1)}
+              title="Centrar en mi ubicación"
+            >
+              ⦿ Mi ubicación
+            </button>
+          )}
+
           <div className="map-container fullscreen">
               <MapContainer
                 center={[config.map.defaultCenter.lat, config.map.defaultCenter.lng]}
@@ -906,7 +1020,43 @@ const RecyclingPointsMap: React.FC = () => {
                   tileSize={256}
                 />
                 
-                <MapEventHandler />
+                <MapViewportSync onViewChange={setMapView} />
+                <MapAutoCenterOnUser
+                  target={currentUserLocation}
+                  autoCentered={hasAutoCenteredOnUserLocation}
+                  onAutoCentered={() => setHasAutoCenteredOnUserLocation(true)}
+                />
+                <MapRecenterOnDemand target={currentUserLocation} seq={recenterToUserSeq} />
+
+                {currentUserLocation && (
+                  <CircleMarker
+                    center={currentUserLocation}
+                    radius={currentUserAuraRadius}
+                    pathOptions={{
+                      color: '#93c5fd',
+                      fillColor: '#93c5fd',
+                      fillOpacity: 0.22,
+                      weight: 1.25,
+                    }}
+                    interactive={false}
+                    bubblingMouseEvents={false}
+                  />
+                )}
+
+                {currentUserLocation && (
+                  <CircleMarker
+                    center={currentUserLocation}
+                    radius={currentUserDotRadius}
+                    pathOptions={{
+                      color: '#ffffff',
+                      fillColor: '#2563eb',
+                      fillOpacity: 1,
+                      weight: 2,
+                    }}
+                    interactive={false}
+                    bubblingMouseEvents={false}
+                  />
+                )}
 
                 {markerClusters
                   .filter(cluster => !isNaN(cluster.latitude) && !isNaN(cluster.longitude))
@@ -914,7 +1064,7 @@ const RecyclingPointsMap: React.FC = () => {
                     <Marker
                       key={cluster.id}
                       position={[cluster.latitude, cluster.longitude]}
-                      icon={cluster.count > 1 ? createClusterIcon(cluster.count) : recyclingIcon}
+                      icon={cluster.count > 1 ? createClusterIcon(cluster.count, mapView.zoom) : recyclingIcon}
 
                       eventHandlers={{
                         click: () => {

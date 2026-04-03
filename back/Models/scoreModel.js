@@ -67,6 +67,85 @@ export const createScore = async (appointmentId, ratedByUserId, ratedToUserId, r
 };
 
 /**
+ * Obtener estado de una cita por ID
+ */
+export const getAppointmentStateById = async (appointmentId) => {
+  try {
+    const query = `
+      SELECT state
+      FROM appointmentconfirmation
+      WHERE id = ?
+      LIMIT 1
+    `;
+
+    const [rows] = await db.query(query, [appointmentId]);
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+
+    return Number(rows[0].state);
+  } catch (err) {
+    console.error('[ERROR] ScoreModel.getAppointmentStateById:', err);
+    throw err;
+  }
+};
+
+/**
+ * Crear score de reclamo (siempre rating=1 y score=1)
+ */
+export const createComplaintScore = async (appointmentId, ratedByUserId, ratedToUserId, comment = null) => {
+  try {
+    const query = `
+      INSERT INTO score (
+        appointmentConfirmationId,
+        ratedByUserId,
+        ratedToUserId,
+        rating,
+        score,
+        comment,
+        state
+      )
+      VALUES (?, ?, ?, 1, 1, ?, 1)
+    `;
+
+    const [result] = await db.query(query, [
+      appointmentId,
+      ratedByUserId,
+      ratedToUserId,
+      comment,
+    ]);
+
+    return result.insertId;
+  } catch (err) {
+    console.error('[ERROR] ScoreModel.createComplaintScore:', err);
+    throw err;
+  }
+};
+
+/**
+ * Actualizar fila existente como reclamo (normaliza score/rating)
+ */
+export const updateComplaintScore = async (appointmentId, ratedByUserId, comment) => {
+  try {
+    const query = `
+      UPDATE score
+      SET rating = 1,
+          score = 1,
+          comment = ?
+      WHERE appointmentConfirmationId = ?
+        AND ratedByUserId = ?
+        AND state = 1
+    `;
+
+    const [result] = await db.query(query, [comment, appointmentId, ratedByUserId]);
+    return result.affectedRows > 0;
+  } catch (err) {
+    console.error('[ERROR] ScoreModel.updateComplaintScore:', err);
+    throw err;
+  }
+};
+
+/**
  * Verificar si un usuario ya calificó en una cita específica
  */
 export const hasUserRated = async (appointmentId, userId) => {
