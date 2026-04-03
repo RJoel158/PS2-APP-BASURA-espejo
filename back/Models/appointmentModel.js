@@ -230,11 +230,15 @@ export const getAppointmentById = async (id) => {
              uc.email as collectorEmail,
              ic.companyName as collectorCompanyName,
              ic.nit as collectorNit,
+             COALESCE(collector_score.averageRating, 0) as collectorAverageRating,
+             COALESCE(collector_score.totalRatings, 0) as collectorTotalRatings,
              COALESCE(CONCAT(pr.firstname, ' ', pr.lastname), ur.email) as recyclerName,
              ur.phone as recyclerPhone,
              ur.email as recyclerEmail,
              ir.companyName as recyclerCompanyName,
              ir.nit as recyclerNit,
+             COALESCE(recycler_score.averageRating, 0) as recyclerAverageRating,
+             COALESCE(recycler_score.totalRatings, 0) as recyclerTotalRatings,
              m.name as materialName
       FROM appointmentconfirmation ac
       JOIN request r ON ac.idRequest = r.id
@@ -244,6 +248,18 @@ export const getAppointmentById = async (id) => {
       LEFT JOIN person pr ON pr.userId = ur.id
       LEFT JOIN institution ic ON ic.userId = uc.id
       LEFT JOIN institution ir ON ir.userId = ur.id
+      LEFT JOIN (
+        SELECT ratedToUserId, COUNT(*) as totalRatings, ROUND(AVG(rating), 2) as averageRating
+        FROM score
+        WHERE state = 1 AND rating IS NOT NULL
+        GROUP BY ratedToUserId
+      ) collector_score ON collector_score.ratedToUserId = ac.collectorId
+      LEFT JOIN (
+        SELECT ratedToUserId, COUNT(*) as totalRatings, ROUND(AVG(rating), 2) as averageRating
+        FROM score
+        WHERE state = 1 AND rating IS NOT NULL
+        GROUP BY ratedToUserId
+      ) recycler_score ON recycler_score.ratedToUserId = r.idUser
       LEFT JOIN material m ON r.materialId = m.id
       WHERE ac.id = ?
     `;

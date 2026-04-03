@@ -56,6 +56,10 @@ interface AppointmentData {
   recyclerNit?: string;
   collectorId?: number;
   recyclerId?: number;
+  collectorAverageRating?: number;
+  collectorTotalRatings?: number;
+  recyclerAverageRating?: number;
+  recyclerTotalRatings?: number;
 }
 
 interface UserRatingSummary {
@@ -257,6 +261,23 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
       if (!appointmentData) {
         setCollectorRating({ averageRating: 0, totalRatings: 0 });
         setRecyclerRating({ averageRating: 0, totalRatings: 0 });
+        return;
+      }
+
+      const hasCollectorAggregate = appointmentData.collectorAverageRating !== undefined
+        || appointmentData.collectorTotalRatings !== undefined;
+      const hasRecyclerAggregate = appointmentData.recyclerAverageRating !== undefined
+        || appointmentData.recyclerTotalRatings !== undefined;
+
+      if (hasCollectorAggregate || hasRecyclerAggregate) {
+        setCollectorRating({
+          averageRating: Number(appointmentData.collectorAverageRating || 0),
+          totalRatings: Number(appointmentData.collectorTotalRatings || 0)
+        });
+        setRecyclerRating({
+          averageRating: Number(appointmentData.recyclerAverageRating || 0),
+          totalRatings: Number(appointmentData.recyclerTotalRatings || 0)
+        });
         return;
       }
 

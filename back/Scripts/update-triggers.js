@@ -91,38 +91,8 @@ BEGIN
       WHERE r.id = NEW.idRequest;
     END IF;
     
-    IF NEW.state = 5 THEN
-      INSERT INTO notifications (userId, actorId, type, title, body, requestId, appointmentId, expireAt)
-      SELECT 
-        NEW.collectorId,
-        r.idUser,
-        'appointment_canceled',
-        'Cita cancelada',
-        CONCAT('La cita con ', ur.email, ' ha sido cancelada'),
-        NEW.idRequest,
-        NEW.id,
-        NOW() + INTERVAL 7 DAY
-      FROM request r
-      JOIN users ur ON ur.id = r.idUser
-      WHERE r.id = NEW.idRequest;
-    END IF;
-    
-    IF NEW.state = 4 THEN
-      INSERT INTO notifications (userId, actorId, type, title, body, requestId, appointmentId, expireAt)
-      SELECT 
-        NEW.collectorId,
-        r.idUser,
-        'appointment_completed',
-        'Recolección completada',
-        CONCAT('La recolección de ', COALESCE(m.name, 'tu material'), ' con ', ur.email, ' ha sido marcada como completada'),
-        NEW.idRequest,
-        NEW.id,
-        NOW() + INTERVAL 7 DAY
-      FROM request r
-      JOIN users ur ON ur.id = r.idUser
-      LEFT JOIN material m ON m.id = r.materialId
-      WHERE r.id = NEW.idRequest;
-    END IF;
+    -- CANCELLED (5) y COMPLETED (4) se manejan en backend
+    -- para direccionar correctamente por actor y evitar duplicados.
     
   END IF;
 END`;

@@ -5,6 +5,66 @@ import * as ScoreModel from "../Models/scoreModel.js";
 import { sendRealTimeNotification } from "../server.js";
 import { APPOINTMENT_STATE, REQUEST_STATE } from "../shared/constants.js";
 
+const deleteNotificationsByIds = async (ids = []) => {
+  if (!ids || ids.length === 0) return;
+
+  await db.query(
+    `DELETE FROM notifications WHERE id IN (${ids.map(() => '?').join(',')})`,
+    ids
+  );
+};
+
+const ensureSingleNotificationForUser = async ({
+  userId,
+  type,
+  title,
+  body,
+  requestId,
+  appointmentId,
+}) => {
+  const [rows] = await db.query(
+    `SELECT id, userId, type, title, body, requestId, appointmentId, \`read\`, createdAt
+     FROM notifications
+     WHERE userId = ?
+       AND appointmentId = ?
+       AND requestId = ?
+       AND type = ?
+     ORDER BY id DESC`,
+    [userId, appointmentId, requestId, type]
+  );
+
+  if (rows && rows.length > 1) {
+    const duplicateIds = rows.slice(1).map((row) => row.id);
+    await deleteNotificationsByIds(duplicateIds);
+  }
+
+  if (rows && rows.length > 0) {
+    return rows[0];
+  }
+
+  const newId = await NotificationModel.createNotification(
+    userId,
+    title,
+    body,
+    type,
+    requestId,
+    requestId,
+    appointmentId
+  );
+
+  return {
+    id: newId,
+    userId,
+    type,
+    title,
+    body,
+    requestId,
+    appointmentId,
+    read: 0,
+    createdAt: new Date().toISOString(),
+  };
+};
+
 /** POST /appointments */
 export const createAppointment = async (req, res) => {
   const { userId, institutionId, date, description } = req.body;
@@ -343,26 +403,25 @@ export const cancelAppointment = async (req, res) => {
 
         console.log(`[INFO] Sending notification to user ${notificationUserId} about cancellation by ${cancellerName}`);
 
-        // La notificación se crea por trigger en BD al cambiar estado de la cita.
-        // Para evitar duplicados, solo recuperamos la última creada y la emitimos en tiempo real.
-        const [notifications] = await db.query(
-          `SELECT id, type, title, body, requestId, appointmentId, \`read\`, createdAt
-           FROM notifications
+        // Evitar notificaciones incorrectas al usuario que cancela (trigger legado)
+        await db.query(
+          `DELETE FROM notifications
            WHERE userId = ?
              AND appointmentId = ?
              AND requestId = ?
-             AND type = 'appointment_canceled'
-           ORDER BY id DESC
-           LIMIT 1`,
-          [notificationUserId, parseInt(id), appointment.idRequest]
+             AND type = 'appointment_canceled'`,
+          [parseInt(userId), parseInt(id), appointment.idRequest]
         );
 
-        if (!notifications || notifications.length === 0) {
-          console.warn(`[WARN] No trigger notification found for cancellation appointmentId=${id}, userId=${notificationUserId}`);
-          return;
-        }
+        const notification = await ensureSingleNotificationForUser({
+          userId: notificationUserId,
+          type: 'appointment_canceled',
+          title: notificationTitle,
+          body: notificationMessage,
+          requestId: appointment.idRequest,
+          appointmentId: parseInt(id),
+        });
 
-        const notification = notifications[0];
         const notificationData = {
           id: notification.id,
           title: notification.title || notificationTitle,
@@ -705,28 +764,25 @@ export const completeAppointmentEndpoint = async (req, res) => {
         // ========== NOTIFICACIÓN AL RECYCLER ==========
         console.log("[DEBUG] Creating notification for RECYCLER (userId: " + recyclerId + ")");
         try {
-          const notifId = await NotificationModel.createNotification(
-            recyclerId,
-            notificationTitle,
-            notificationMessage,
-            "appointment_completed",
-            requestId,              // entityId
-            requestId,              // requestId
-            parseInt(id)            // appointmentId
-          );
-
-          console.log(`[INFO] ✅ Notification created in DB for RECYCLER with ID: ${notifId}`);
-
-          // Enviar en tiempo real al recycler
-          const notificationData = {
-            id: notifId,
+          const recyclerNotification = await ensureSingleNotificationForUser({
+            userId: recyclerId,
             type: 'appointment_completed',
             title: notificationTitle,
             body: notificationMessage,
-            requestId: requestId,
+            requestId,
             appointmentId: parseInt(id),
-            read: false,
-            createdAt: new Date().toISOString(),
+          });
+
+          // Enviar en tiempo real al recycler
+          const notificationData = {
+            id: recyclerNotification.id,
+            type: recyclerNotification.type,
+            title: recyclerNotification.title,
+            body: recyclerNotification.body,
+            requestId: recyclerNotification.requestId,
+            appointmentId: recyclerNotification.appointmentId,
+            read: Boolean(recyclerNotification.read),
+            createdAt: recyclerNotification.createdAt,
             actorEmail: collectorEmail,
           };
 
@@ -739,7 +795,7 @@ export const completeAppointmentEndpoint = async (req, res) => {
         }
 
         // ========== NOTIFICACIÓN AL COLLECTOR (confirmación de completado) ==========
-        console.log("[DEBUG] Creating confirmation notification for COLLECTOR (userId: " + collectorId + ")");
+        console.log("[DEBUG] Ensuring single confirmation notification for COLLECTOR (userId: " + collectorId + ")");
         try {
           // Obtener nombre del reciclador
           const [recyclerInfo] = await db.query(
@@ -752,29 +808,28 @@ export const completeAppointmentEndpoint = async (req, res) => {
           
           const recyclerName = recyclerInfo?.[0]?.recyclerName || 'Usuario';
           const collectorConfirmMsg = `Tu recolección ha sido completada. ${recyclerName} calificará pronto.`;
-          
-          const notifIdCollector = await NotificationModel.createNotification(
-            collectorId,
-            "✅ Recolección confirmada",
-            collectorConfirmMsg,
-            "appointment_completed",
-            requestId,
-            requestId,
-            parseInt(id)
-          );
 
-          console.log(`[INFO] ✅ Confirmation notification created in DB for COLLECTOR with ID: ${notifIdCollector}`);
+          const collectorNotification = await ensureSingleNotificationForUser({
+            userId: collectorId,
+            type: 'appointment_completed',
+            title: '✅ Recolección confirmada',
+            body: collectorConfirmMsg,
+            requestId,
+            appointmentId: parseInt(id),
+          });
+
+          console.log(`[INFO] ✅ Confirmation notification ready for COLLECTOR with ID: ${collectorNotification.id}`);
 
           // Enviar en tiempo real al collector
           const notificationDataCollector = {
-            id: notifIdCollector,
-            type: 'appointment_completed',
-            title: "✅ Recolección confirmada",
-            body: collectorConfirmMsg,
-            requestId: requestId,
-            appointmentId: parseInt(id),
-            read: false,
-            createdAt: new Date().toISOString(),
+            id: collectorNotification.id,
+            type: collectorNotification.type,
+            title: collectorNotification.title,
+            body: collectorNotification.body,
+            requestId: collectorNotification.requestId,
+            appointmentId: collectorNotification.appointmentId,
+            read: Boolean(collectorNotification.read),
+            createdAt: collectorNotification.createdAt,
             actorEmail: recyclerName,
           };
 
