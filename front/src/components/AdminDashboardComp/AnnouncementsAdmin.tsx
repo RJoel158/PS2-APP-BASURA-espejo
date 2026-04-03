@@ -11,6 +11,7 @@ import CommonHeader from '../CommonComp/CommonHeader';
 import SuccessModal from '../CommonComp/SuccesModal';
 import ConfirmModal from '../CommonComp/ConfirmModal';
 import { config } from '../../config/environment';
+import { Validator } from '../../common/Validator';
 
 interface Announcement {
   id: number;
@@ -49,8 +50,6 @@ const AnnouncementsAdmin: React.FC = () => {
   // Estados para el modal de éxito/error
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   // Estados para el modal de confirmación
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -75,6 +74,7 @@ const AnnouncementsAdmin: React.FC = () => {
     imagePath: '',
     targetRole: 'both' as 'recolector' | 'reciclador' | 'both',
   });
+  const [createFormError, setCreateFormError] = useState<string | null>(null);
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
@@ -91,6 +91,70 @@ const AnnouncementsAdmin: React.FC = () => {
   useEffect(() => {
     loadAnnouncements();
   }, []);
+
+  const isValidHttpUrl = (value: string): boolean => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const validateAnnouncementPayload = (payload: {
+    title: string;
+    description: string;
+    url: string;
+    imagePath: string;
+    targetRole: 'recolector' | 'reciclador' | 'both';
+  }) => {
+    const title = Validator.normalizeSpaces(payload.title || '');
+    const description = Validator.normalizeSpaces(payload.description || '');
+    const url = Validator.normalizeSpaces(payload.url || '');
+    const imagePath = Validator.normalizeSpaces(payload.imagePath || '');
+    const targetRole = payload.targetRole;
+
+    const errors: string[] = [];
+
+    if (!title) {
+      errors.push('El título es obligatorio.');
+    }
+
+    const descriptionError = Validator.validateDescription(description, 255, 1);
+    if (descriptionError) {
+      errors.push(descriptionError);
+    }
+
+    if (!url) {
+      errors.push('La URL es obligatoria.');
+    } else if (!isValidHttpUrl(url)) {
+      errors.push('La URL debe iniciar con http:// o https:// y tener un formato válido.');
+    }
+
+    if (!imagePath) {
+      errors.push('Debes subir una imagen.');
+    }
+
+    if (!['recolector', 'reciclador', 'both'].includes(targetRole)) {
+      errors.push('Debes seleccionar a qué rol se mostrará el anuncio.');
+    }
+
+    return {
+      errors,
+      sanitized: {
+        title,
+        description,
+        url,
+        imagePath,
+        targetRole,
+      },
+    };
+  };
+
+  const showValidationError = (errors: string[]) => {
+    const message = `Completa o corrige los siguientes campos:\n• ${errors.join('\n• ')}`;
+    setError(message);
+  };
 
   const loadAnnouncements = async () => {
     try {
@@ -221,6 +285,7 @@ const AnnouncementsAdmin: React.FC = () => {
           ...prev,
           imagePath: relativePath  // Solo el path relativo
         }));
+        setCreateFormError(null);
         console.log('✅ Imagen guardada en newAnnouncement:', relativePath);
       } else {
         // Estamos editando - guardar el path relativo
@@ -243,17 +308,30 @@ const AnnouncementsAdmin: React.FC = () => {
   const handleSaveChanges = async () => {
     if (!selectedAnnouncement) return;
 
+    const validation = validateAnnouncementPayload({
+      title: formData.title,
+      description: formData.description,
+      url: formData.url,
+      imagePath: formData.imagePath,
+      targetRole: formData.targetRole,
+    });
+
+    if (validation.errors.length > 0) {
+      showValidationError(validation.errors);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
       await updateAnnouncement(
         selectedAnnouncement.id,
-        formData.title,
-        formData.description,
-        formData.url,
-        formData.imagePath,
-        formData.targetRole,
+        validation.sanitized.title,
+        validation.sanitized.description,
+        validation.sanitized.url,
+        validation.sanitized.imagePath,
+        validation.sanitized.targetRole,
         formData.state
       );
 
@@ -262,11 +340,11 @@ const AnnouncementsAdmin: React.FC = () => {
         a.id === selectedAnnouncement.id
           ? {
               ...a,
-              title: formData.title,
-              description: formData.description,
-              url: formData.url,
-              imagePath: formData.imagePath,
-              targetRole: formData.targetRole,
+              title: validation.sanitized.title,
+              description: validation.sanitized.description,
+              url: validation.sanitized.url,
+              imagePath: validation.sanitized.imagePath,
+              targetRole: validation.sanitized.targetRole,
               state: formData.state
             }
           : a
@@ -286,8 +364,6 @@ const AnnouncementsAdmin: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al actualizar anuncio';
       setError(message);
-      setErrorModalMessage(`❌ Error: ${message}`);
-      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -341,8 +417,6 @@ const AnnouncementsAdmin: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al eliminar anuncio';
       setError(message);
-      setErrorModalMessage(`❌ Error: ${message}`);
-      setShowErrorModal(true);
     } finally {
       setLoading(false);
       setShowConfirmModal(false);
@@ -353,45 +427,43 @@ const AnnouncementsAdmin: React.FC = () => {
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones
-    if (!newAnnouncement.title || !newAnnouncement.title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-
-    if (!newAnnouncement.imagePath || !newAnnouncement.imagePath.trim()) {
-      setError('Debes subir una imagen primero');
+    const validation = validateAnnouncementPayload(newAnnouncement);
+    if (validation.errors.length > 0) {
+      const message = `Completa o corrige los siguientes campos:\n• ${validation.errors.join('\n• ')}`;
+      setError(null);
+      setCreateFormError(message);
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
+      setCreateFormError(null);
 
       // Obtener el usuario autenticado
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
       
       if (!user || !user.id) {
-        setError('Usuario no autenticado. Por favor, inicia sesión');
+        setCreateFormError('Usuario no autenticado. Por favor, inicia sesión');
         return;
       }
 
       console.log('📤 Creando anuncio:', {
-        title: newAnnouncement.title,
-        description: newAnnouncement.description,
-        url: newAnnouncement.url,
-        imagePath: newAnnouncement.imagePath,
-        targetRole: newAnnouncement.targetRole,
+        title: validation.sanitized.title,
+        description: validation.sanitized.description,
+        url: validation.sanitized.url,
+        imagePath: validation.sanitized.imagePath,
+        targetRole: validation.sanitized.targetRole,
         createdBy: user.id
       });
 
       await createAnnouncement(
-        newAnnouncement.title.trim(),
-        newAnnouncement.description.trim(),
-        newAnnouncement.url.trim(),
-        newAnnouncement.imagePath,
-        newAnnouncement.targetRole,
+        validation.sanitized.title,
+        validation.sanitized.description,
+        validation.sanitized.url,
+        validation.sanitized.imagePath,
+        validation.sanitized.targetRole,
         user.id
       );
 
@@ -414,9 +486,8 @@ const AnnouncementsAdmin: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido al crear anuncio';
       console.error('❌ Error:', err);
-      setError(message);
-      setErrorModalMessage(`❌ Error: ${message}`);
-      setShowErrorModal(true);
+      setError(null);
+      setCreateFormError(message);
     } finally {
       setLoading(false);
     }
@@ -437,8 +508,10 @@ const AnnouncementsAdmin: React.FC = () => {
   };
 
   const handleOpenModal = () => {
+    setError(null);
     setNewAnnouncement({ title: '', description: '', url: '', imagePath: '', targetRole: 'both' });
     setPreviewImage(null);
+    setCreateFormError(null);
     setShowModal(true);
   };
 
@@ -446,6 +519,7 @@ const AnnouncementsAdmin: React.FC = () => {
     setShowModal(false);
     setNewAnnouncement({ title: '', description: '', url: '', imagePath: '', targetRole: 'both' });
     setPreviewImage(null);
+    setCreateFormError(null);
   };
 
   return (
@@ -1206,7 +1280,7 @@ const AnnouncementsAdmin: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form noValidate onSubmit={handleCreateAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label style={{
                   display: 'block',
@@ -1220,7 +1294,10 @@ const AnnouncementsAdmin: React.FC = () => {
                 <input
                   type="text"
                   value={newAnnouncement.title}
-                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => {
+                    setCreateFormError(null);
+                    setNewAnnouncement(prev => ({ ...prev, title: e.target.value }));
+                  }}
                   placeholder="Ej: Nueva Promoción..."
                   style={{
                     width: '100%',
@@ -1236,7 +1313,6 @@ const AnnouncementsAdmin: React.FC = () => {
                   }}
                   onFocus={(e) => e.currentTarget.style.borderColor = '#149D52'}
                   onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
-                  required
                 />
               </div>
 
@@ -1252,7 +1328,10 @@ const AnnouncementsAdmin: React.FC = () => {
                 </label>
                 <textarea
                   value={newAnnouncement.description}
-                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => {
+                    setCreateFormError(null);
+                    setNewAnnouncement(prev => ({ ...prev, description: e.target.value }));
+                  }}
                   placeholder="Describe el anuncio"
                   maxLength={255}
                   rows={3}
@@ -1287,7 +1366,10 @@ const AnnouncementsAdmin: React.FC = () => {
                 <input
                   type="text"
                   value={newAnnouncement.url}
-                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, url: e.target.value }))}
+                  onChange={(e) => {
+                    setCreateFormError(null);
+                    setNewAnnouncement(prev => ({ ...prev, url: e.target.value }));
+                  }}
                   placeholder="https://ejemplo.com"
                   style={{
                     width: '100%',
@@ -1347,7 +1429,6 @@ const AnnouncementsAdmin: React.FC = () => {
                     style={{
                       display: 'none'
                     }}
-                    required
                   />
                   <span style={{
                     pointerEvents: 'none',
@@ -1409,7 +1490,10 @@ const AnnouncementsAdmin: React.FC = () => {
                 <select
                   name="targetRole"
                   value={newAnnouncement.targetRole}
-                  onChange={(e) => setNewAnnouncement(prev => ({ ...prev, targetRole: e.target.value as 'recolector' | 'reciclador' | 'both' }))}
+                  onChange={(e) => {
+                    setCreateFormError(null);
+                    setNewAnnouncement(prev => ({ ...prev, targetRole: e.target.value as 'recolector' | 'reciclador' | 'both' }));
+                  }}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -1479,6 +1563,23 @@ const AnnouncementsAdmin: React.FC = () => {
                   Crear Anuncio
                 </button>
               </div>
+
+              {createFormError && (
+                <div
+                  role="alert"
+                  style={{
+                    backgroundColor: '#fee2e2',
+                    color: '#991b1b',
+                    border: '1px solid #fecaca',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem',
+                    fontSize: '0.9rem',
+                    whiteSpace: 'pre-line'
+                  }}
+                >
+                  {createFormError}
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -1520,14 +1621,6 @@ const AnnouncementsAdmin: React.FC = () => {
         />
       )}
 
-      {/* Modal de error */}
-      {showErrorModal && (
-        <SuccessModal
-          title="❌ Error"
-          message={errorModalMessage}
-          onClose={() => setShowErrorModal(false)}
-        />
-      )}
     </div>
   );
 };
