@@ -1,6 +1,7 @@
 //pickupInfo
 import React, { useEffect, useState } from 'react';
 import { apiUrl } from '../../config/environment';
+import api from '../../services/api';
 import {
   APPOINTMENT_STATE,
   getRequestStateLabel,
@@ -282,49 +283,30 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
       const userId = currentUser.id;
       console.log('[INFO] Usuario que cancela:', userId, 'appointmentData:', appointmentData);
 
-      // Si usas token JWT en localStorage/sessionStorage:
-      const token = localStorage.getItem('token'); // o donde lo guardes
+      const userRole = isCollector() ? 'collector' : 'recycler';
 
       const url = apiUrl(`/api/appointments/${appointmentId}/cancel`);
-      console.log('[INFO] PUT ->', url, 'payload=', { userId, userRole: 'collector' });
+      console.log('[INFO] PUT ->', url, 'payload=', { userId, userRole });
 
-      const response = await fetch(url, {
-        method: 'PUT', // <- Cambio a PUT para coincidir con backend
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          // Ajusta nombres de campo si el backend usa snake_case o distintos nombres
+      const response = await api.put(
+        `/api/appointments/${appointmentId}/cancel`,
+        {
           userId,
-          userRole: 'collector'
-        })
-      });
+          userRole,
+        },
+        {
+          timeout: 30000,
+        }
+      );
 
-      // Manejo seguro del body aunque no sea JSON
-      const text = await response.text();
-      let result: any = null;
-      try {
-        result = text ? JSON.parse(text) : null;
-      } catch (e) {
-        // respuesta no JSON
-        result = { success: response.ok, raw: text };
-      }
+      const result: any = response?.data || null;
 
       console.log('[INFO] Response status:', response.status, 'parsed:', result);
       console.log('[DEBUG] Full response object:', { 
-        ok: response.ok, 
         status: response.status, 
         statusText: response.statusText,
         result 
       });
-
-      if (!response.ok) {
-        // Extrae mensaje de error si existe
-        const msg = result?.error || result?.message || result?.raw || `Error ${response.status}: ${response.statusText}`;
-        console.error('[ERROR] Backend returned error:', msg);
-        throw new Error(msg);
-      }
 
       // Aquí suponemos que result.success indica éxito
       if (result && (result.success === true || response.status === 200 || response.status === 204)) {
@@ -347,7 +329,12 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
           message: 'La cita ha sido cancelada exitosamente.\n\nLa solicitud estará disponible nuevamente en el mapa.'
         });
         setShowSuccessModal(true);
-        setShouldReloadOnSuccessClose(true);
+
+        // Evita que el usuario quede atrapado esperando cerrar manualmente.
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          window.location.reload();
+        }, 1400);
       } else {
         const msg = result?.error || result?.message || 'El servidor respondió sin confirmar la cancelación';
         console.error('[ERROR] Unexpected response:', { result, status: response.status });
@@ -355,7 +342,37 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
       }
     } catch (err) {
       console.error('[ERROR] Error cancelling appointment:', err);
-      setErrorModalMessage(`Error al cancelar la cita:\n\n${err instanceof Error ? err.message : JSON.stringify(err)}`);
+      const errorCode = (err as any)?.code;
+      const backendMessage = (err as any)?.response?.data?.error || (err as any)?.response?.data?.message;
+      const status = (err as any)?.response?.status;
+
+      // Si hubo timeout, verificar si la cita realmente se canceló para evitar falso negativo en UX.
+      if (errorCode === 'ECONNABORTED' && appointmentId) {
+        try {
+          const verifyResponse = await api.get(`/api/appointments/${appointmentId}`, {
+            timeout: 15000,
+          });
+          const latestState = verifyResponse?.data?.data?.state;
+
+          if (Number(latestState) === APPOINTMENT_STATE.CANCELLED) {
+            setAppointmentData(prev => prev ? { ...prev, state: APPOINTMENT_STATE.CANCELLED } : prev);
+            setSuccessMessage({
+              title: ' Cita Cancelada',
+              message: 'La cita sí fue cancelada. La confirmación tardó más de lo esperado.'
+            });
+            setShowSuccessModal(true);
+            setTimeout(() => {
+              setShowSuccessModal(false);
+              window.location.reload();
+            }, 1400);
+            return;
+          }
+        } catch (verifyErr) {
+          console.error('[WARN] No se pudo verificar estado tras timeout:', verifyErr);
+        }
+      }
+
+      setErrorModalMessage(`Error al cancelar la cita${status ? ` (HTTP ${status})` : ''}:\n\n${backendMessage || (err instanceof Error ? err.message : JSON.stringify(err))}`);
       setShowErrorModal(true);
     } finally {
       setCancelling(false);
