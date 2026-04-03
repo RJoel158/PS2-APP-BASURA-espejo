@@ -956,6 +956,11 @@ const FormComp: React.FC = () => {
             {/* Horario */}
             <div className="time-section">
               <h4>Posible horario</h4>
+              <p className="time-availability-text">
+                {loadingSchedule
+                  ? 'Cargando horario disponible...'
+                  : `Horario disponible para seleccionar: ${allowedStartHour} a ${allowedEndHour}`}
+              </p>
               <div className="time-selector">
                 <div className="time-input-group">
                   <label htmlFor="time-from">Desde:</label>

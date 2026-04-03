@@ -21,7 +21,7 @@ const RankingConfiguration: React.FC = () => {
 		setPercent(clampPercent(parsed));
 	};
 
-	const top5Reduction = percent + 3;
+	const top5Reduction = percent + 5;
 	const restReduction = percent;
 
 	useEffect(() => {

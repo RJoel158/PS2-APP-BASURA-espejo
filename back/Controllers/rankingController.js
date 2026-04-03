@@ -286,45 +286,46 @@ const RankingController = {
         // --- DECAY CONFIGURABLE ---
         const rankingDecreaseConfig = await AppConfigModel.getByKey('ranking_decrease');
         const baseDecreasePercent = parseRankingDecreasePercent(rankingDecreaseConfig?.config_value, 10);
-        const top5DecreasePercent = baseDecreasePercent + 3;
+        const top5DecreasePercent = baseDecreasePercent + 5;
         const top5Decay = top5DecreasePercent / 100;
         const restDecay = baseDecreasePercent / 100;
 
-        // Aplica decay a los top 5 (sobre score acumulado real)
-        for (let i = 0; i < recicladores.length; i++) {
+        // Aplica decay extra al top 5 de cada rol (sobre score acumulado real)
+        for (let i = 0; i < recicladores.length && i < 5; i++) {
           const userId = recicladores[i].user_id;
           await conn.query(
-            'UPDATE score SET score = ROUND(score * (1 - ?)) WHERE ratedToUserId = ? AND state = 1',
+            'UPDATE score SET score = score - ROUND(score * ?) WHERE ratedToUserId = ? AND state = 1',
             [top5Decay, userId]
           );
         }
-        for (let i = 0; i < recolectores.length; i++) {
+        for (let i = 0; i < recolectores.length && i < 5; i++) {
           const userId = recolectores[i].user_id;
           await conn.query(
-            'UPDATE score SET score = ROUND(score * (1 - ?)) WHERE ratedToUserId = ? AND state = 1',
+            'UPDATE score SET score = score - ROUND(score * ?) WHERE ratedToUserId = ? AND state = 1',
             [top5Decay, userId]
           );
         }
 
-        // Decay para el resto de usuarios de cada rol
-        const ids = [...recicladores.map(r => r.user_id), ...recolectores.map(r => r.user_id)];
-        if (ids.length > 0) {
-          const placeholders = ids.map(() => '?').join(', ');
+        // Decay base para todos los demás usuarios de esos roles
+        const top5UserIds = [...recicladores.slice(0, 5), ...recolectores.slice(0, 5)].map((r) => r.user_id);
+
+        if (top5UserIds.length > 0) {
+          const placeholders = top5UserIds.map(() => '?').join(', ');
           await conn.query(
             `UPDATE score s
              INNER JOIN users u ON s.ratedToUserId = u.id
-             SET s.score = ROUND(s.score * (1 - ?))
+             SET s.score = s.score - ROUND(s.score * ?)
              WHERE s.state = 1
                AND u.state != 0
                AND u.roleId IN (2, 3)
                AND u.id NOT IN (${placeholders})`,
-            [restDecay, ...ids]
+            [restDecay, ...top5UserIds]
           );
         } else {
           await conn.query(
             `UPDATE score s
              INNER JOIN users u ON s.ratedToUserId = u.id
-             SET s.score = ROUND(s.score * (1 - ?))
+             SET s.score = s.score - ROUND(s.score * ?)
              WHERE s.state = 1
                AND u.state != 0
                AND u.roleId IN (2, 3)` ,
