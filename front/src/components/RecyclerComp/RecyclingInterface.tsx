@@ -7,17 +7,26 @@ import RequestAndAppoint from "./request_&_appoint";
 import ChangePasswordModal from "../PasswordComp/ChangePasswordModal";
 import AnnouncementBanner from "../CommonComp/AnnouncementBanner";
 import Footer from "../HomeComps/Footer";
-import { fetchUnreadCount } from "../../services/notificationService";
+import {
+  connectNotifications,
+  disconnectNotifications,
+  fetchUnreadCount,
+  offNotificationReceived,
+  onNotificationReceived,
+} from "../../services/notificationService";
 
 interface Recycler {
   id: number;
   name?: string;
   points?: number;
+  score?: number;
+  total_score?: number;
+  score_total?: number;
   avatar?: string;
   rol?: string;
   user_id?: number;
   email?: string;
-  puntaje_final?: number;
+  puntaje_final?: number | string;
 }
 
 // Definición de la interfaz User
@@ -42,6 +51,19 @@ const RecyclingInterface: React.FC = () => {
   const [showHowTo, setShowHowTo] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const getRankingPoints = (recycler: Recycler): number => {
+    const rawPoints =
+      recycler.puntaje_final
+      ?? recycler.score
+      ?? recycler.total_score
+      ?? recycler.score_total
+      ?? recycler.points
+      ?? 0;
+
+    const points = Number(rawPoints);
+    return Number.isFinite(points) ? points : 0;
+  };
 
   useEffect(() => {
     const updateViewportState = () => {
@@ -96,6 +118,23 @@ const RecyclingInterface: React.FC = () => {
     }
     fetchTop();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    connectNotifications(user.id);
+
+    const handleIncomingNotification = () => {
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    onNotificationReceived(handleIncomingNotification);
+
+    return () => {
+      offNotificationReceived(handleIncomingNotification);
+      disconnectNotifications();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     const loadUnreadCount = async () => {
@@ -174,7 +213,7 @@ const RecyclingInterface: React.FC = () => {
                           {(recycler.email || recycler.name || 'U').charAt(0).toUpperCase()}
                         </div>
                         <span className="recycler-name-new">{recycler.name || recycler.email || 'Reciclador'}</span>
-                        <span className="recycler-points-new">{recycler.puntaje_final || recycler.points || 0}</span>
+                        <span className="recycler-points-new">{getRankingPoints(recycler)}</span>
                       </div>
                     ))}
                 </div>
@@ -260,7 +299,11 @@ const RecyclingInterface: React.FC = () => {
         >
           <span className="mobile-nav-icon-wrap">
             <i className="bi bi-bell"></i>
-            {unreadCount > 0 && <span className="mobile-nav-notification-alert">!</span>}
+            {unreadCount > 0 && (
+              <span className="mobile-nav-notification-alert">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </span>
           <span>Notificaciones</span>
         </button>
