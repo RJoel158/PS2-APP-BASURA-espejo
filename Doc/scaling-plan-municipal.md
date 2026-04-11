@@ -80,6 +80,29 @@ Entregables:
 - Throughput sostenido mayor sin degradar p95.
 - Plan de capacidad por rango de usuarios activos.
 
+## Criterios de activacion de Fase 4 (automaticos)
+
+Activar Fase 4 cuando se cumpla cualquiera de estas reglas:
+
+1. Regla de saturacion por rendimiento (3 ventanas consecutivas de 10 min):
+   - p95 > 500 ms, y
+   - CPU promedio > 70%, y
+   - error rate > 1% o 429 login > 2%.
+2. Regla de capacidad (2 ejecuciones consecutivas de carga extendida):
+   - p95 > 500 ms con perfil municipal, o
+   - throughput no escala al subir concurrencia en >= 30%.
+3. Regla de resiliencia operacional:
+   - 2 o mas incidentes P1/P2 de disponibilidad en 14 dias.
+
+No activar Fase 4 si no se cumple ninguna regla por 14 dias de monitoreo continuo.
+
+## Checklist minimo antes de activar Fase 4
+
+1. Confirmar compatibilidad de autenticacion (cookies/JWT) en despliegue multi-instancia.
+2. Confirmar estrategia para Socket.IO (sticky sessions o adapter distribuido).
+3. Congelar cambios funcionales durante la ventana de despliegue.
+4. Ejecutar regresion funcional completa despues del cambio (login -> request -> appointment -> notifications -> ranking).
+
 ## Matriz de despliegue (Go/No-Go)
 
 - GO:
@@ -104,4 +127,4 @@ Entregables:
 
 1. Ejecutar monitoreo continuo de 48 horas en staging con `ops:monitor:ready` y `ops:smoke:daily`.
 2. Correr `perf:load` para validar estabilidad bajo perfil municipal extendido.
-3. Planificar Fase 4 (cluster/PM2) con prueba de regresion funcional posterior.
+3. Activar Fase 4 solo si se dispara alguno de los criterios automaticos de este documento.
