@@ -108,13 +108,7 @@ const RecollectingInterface: React.FC = () => {
         if (period.estado === 'activo') {
           const top = await getLiveRanking(period.id, 'recolector');
           console.log('Top recibido (activo):', top);
-          if (top && Array.isArray(top)) {
-            setRecyclers(top);
-          } else if (top && Array.isArray(top.recolectores)) {
-            setRecyclers(top.recolectores);
-          } else {
-            setRecyclers([]);
-          }
+          setRecyclers(Array.isArray(top) ? top : []);
         } else {
           const top = await getHistoricalRanking(period.id, 'recolector');
           setRecyclers(Array.isArray(top) ? top : []);

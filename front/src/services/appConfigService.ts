@@ -168,6 +168,24 @@ const asNumberOrFallback = (value: unknown, fallback: number) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toGeoZoneBox = (zone: unknown): GeoZoneBox => {
+  const candidate = (zone ?? {}) as Partial<GeoZoneBox>;
+  const shapeType: GeoZoneBox['shapeType'] = candidate.shapeType === 'circle' ? 'circle' : 'rectangle';
+
+  return {
+    id: Number(candidate.id) || undefined,
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+    shapeType,
+    centerLat: asNumberOrFallback(candidate.centerLat, NaN),
+    centerLng: asNumberOrFallback(candidate.centerLng, NaN),
+    radiusMeters: asNumberOrFallback(candidate.radiusMeters, NaN),
+    minLat: asNumberOrFallback(candidate.minLat, 0),
+    maxLat: asNumberOrFallback(candidate.maxLat, 0),
+    minLng: asNumberOrFallback(candidate.minLng, 0),
+    maxLng: asNumberOrFallback(candidate.maxLng, 0),
+  };
+};
+
 export const getGeoCoverageConfig = async (): Promise<GeoCoverageConfig> => {
   const [enabledRow, messageRow, bboxRow, zonesRow] = await Promise.all([
     getAppConfigByKey('geo_restriction_enabled'),
@@ -199,20 +217,7 @@ export const getGeoCoverageConfig = async (): Promise<GeoCoverageConfig> => {
     maxLng: asNumberOrFallback(bboxRaw?.maxLng, DEFAULT_GEO_COVERAGE_CONFIG.boliviaBbox.maxLng),
   };
 
-  const allowedZones = Array.isArray(zonesRaw)
-    ? zonesRaw.map((zone) => ({
-      id: Number((zone as GeoZoneBox).id) || undefined,
-      name: typeof (zone as GeoZoneBox).name === 'string' ? (zone as GeoZoneBox).name : undefined,
-      shapeType: (zone as GeoZoneBox).shapeType === 'circle' ? 'circle' : 'rectangle',
-      centerLat: asNumberOrFallback((zone as GeoZoneBox).centerLat, NaN),
-      centerLng: asNumberOrFallback((zone as GeoZoneBox).centerLng, NaN),
-      radiusMeters: asNumberOrFallback((zone as GeoZoneBox).radiusMeters, NaN),
-      minLat: asNumberOrFallback((zone as GeoZoneBox).minLat, 0),
-      maxLat: asNumberOrFallback((zone as GeoZoneBox).maxLat, 0),
-      minLng: asNumberOrFallback((zone as GeoZoneBox).minLng, 0),
-      maxLng: asNumberOrFallback((zone as GeoZoneBox).maxLng, 0),
-    }))
-    : [];
+  const allowedZones = Array.isArray(zonesRaw) ? zonesRaw.map(toGeoZoneBox) : [];
 
   return {
     enabled,
