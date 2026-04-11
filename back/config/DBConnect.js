@@ -22,8 +22,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: parseInt(process.env.DB_POOL_CONNECTION_LIMIT || '5'),
-  queueLimit: 0
+  connectionLimit: parseInt(process.env.DB_POOL_CONNECTION_LIMIT || '10'),
+  queueLimit: parseInt(process.env.DB_POOL_QUEUE_LIMIT || '0')
 });
 
 console.log(`🔗 Pool de MySQL inicializado para ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);

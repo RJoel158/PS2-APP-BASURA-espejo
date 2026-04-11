@@ -9,6 +9,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:routes": "node test-all-routes.js",
     "test:report": "node test-routes-report.js",
+    "perf:smoke": "artillery run Scripts/performance/artillery/smoke.yml --output Scripts/performance/reports/smoke.json",
+    "perf:load": "artillery run Scripts/performance/artillery/load-500.yml --output Scripts/performance/reports/load-500.json",
+    "perf:score-race": "artillery run Scripts/performance/artillery/score-race.yml --output Scripts/performance/reports/score-race.json",
+    "perf:generate-csv": "node Scripts/performance/generate-users-csv.mjs",
+    "perf:validate-csv": "node Scripts/performance/validate-users-csv.mjs",
+    "perf:report:smoke": "artillery report Scripts/performance/reports/smoke.json --output Scripts/performance/reports/smoke.html",
+    "perf:report:load": "artillery report Scripts/performance/reports/load-500.json --output Scripts/performance/reports/load-500.html",
+    "perf:report:score-race": "artillery report Scripts/performance/reports/score-race.json --output Scripts/performance/reports/score-race.html",
+    "perf:analyze": "node Scripts/performance/analyze-artillery-report.mjs",
     "verify": "node ../scripts/verify-setup.js",
     "setup": "npm install && npm run verify"
   },
@@ -31,5 +40,8 @@
     "nodemon": "^3.1.10",
     "resend": "^6.0.2",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.22"
   }
 }

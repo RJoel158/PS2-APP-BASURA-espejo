@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import routes from './Routes/index.js';
 import { verifyEmailConnection } from './Services/emailService.js';
 import DBConnect from './config/DBConnect.js';
+import { checkConnection } from './config/DBConnect.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -53,7 +54,20 @@ const server = createServer(app);
 const FALLBACK_JWT_SECRET = 'greenbit-dev-insecure-secret-change-me';
 const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET || FALLBACK_JWT_SECRET;
 
-app.set('trust proxy', 1);
+const resolveTrustProxySetting = () => {
+  const raw = String(process.env.TRUST_PROXY || '').trim().toLowerCase();
+  if (!raw) {
+    return process.env.NODE_ENV === 'production' ? 1 : false;
+  }
+
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  const asNumber = Number(raw);
+  if (Number.isInteger(asNumber) && asNumber >= 0) return asNumber;
+  return raw;
+};
+
+app.set('trust proxy', resolveTrustProxySetting());
 
 // Configurar CORS usando variable de entorno
 // Soporta múltiples orígenes separados por coma para túneles/dev
@@ -211,6 +225,23 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
+app.get('/health/ready', async (req, res) => {
+  const dbConnected = await checkConnection();
+  const status = dbConnected ? 200 : 503;
+
+  res.status(status).json({
+    status: dbConnected ? 'ready' : 'degraded',
+    services: {
+      database: dbConnected ? 'online' : 'offline'
+    },
+    process: {
+      uptimeSeconds: Math.round(process.uptime()),
+      memoryMb: Math.round(process.memoryUsage().rss / (1024 * 1024))
+    },
+    timestamp: new Date()
+  });
+});
+
 // Ruta para verificar el estado de la base de datos
 app.get('/api/db-status', async (req, res) => {
   const isConnected = await checkConnection();
@@ -292,6 +323,28 @@ export const sendRealTimeNotification = (userId, notification) => {
 };
 
 const PORT = process.env.PORT || 3000;
+
+const shutdown = async (signal) => {
+  console.log(`🛑 Señal ${signal} recibida. Iniciando cierre controlado...`);
+  server.close(async () => {
+    try {
+      await DBConnect.end();
+      console.log('✅ Pool de base de datos cerrado correctamente.');
+    } catch (error) {
+      console.error('❌ Error cerrando pool de base de datos:', error.message);
+    } finally {
+      process.exit(0);
+    }
+  });
+
+  setTimeout(() => {
+    console.error('⏱️ Cierre forzado por timeout');
+    process.exit(1);
+  }, 15000).unref();
+};
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
 
 // ========================================
 // MIDDLEWARE DE MANEJO DE ERRORES

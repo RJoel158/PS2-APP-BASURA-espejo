@@ -1,0 +1,46 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 2
+      name: "smoke"
+  processor: "./processor.cjs"
+  payload:
+    path: "./users.sample.csv"
+    fields:
+      - "email"
+      - "password"
+      - "userId"
+      - "role"
+      - "appointmentId"
+      - "ratedToUserId"
+      - "clientIp"
+    order: sequence
+scenarios:
+  - name: "health-and-login"
+    flow:
+      - get:
+          url: "/health"
+          afterResponse: "trackResponse"
+      - post:
+          url: "/api/users/login"
+          headers:
+            x-forwarded-for: "{{ clientIp }}"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.user.token"
+              as: "accessToken"
+          afterResponse: "captureAuthFromBody"
+      - function: "ensureUserId"
+      - get:
+          url: "/api/score/user/{{ userId }}/total"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/notifications/user/{{ userId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"

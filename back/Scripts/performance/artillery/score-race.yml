@@ -1,0 +1,45 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 180
+      arrivalRate: 20
+      rampTo: 80
+      name: "score-race"
+  processor: "./processor.cjs"
+  payload:
+    path: "./users.sample.csv"
+    fields:
+      - "email"
+      - "password"
+      - "userId"
+      - "role"
+      - "appointmentId"
+      - "ratedToUserId"
+      - "clientIp"
+    order: random
+scenarios:
+  - name: "parallel-score-submit"
+    flow:
+      - post:
+          url: "/api/users/login"
+          headers:
+            x-forwarded-for: "{{ clientIp }}"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.user.token"
+              as: "accessToken"
+          afterResponse: "captureAuthFromBody"
+      - function: "ensureUserId"
+      - post:
+          url: "/api/score"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          json:
+            appointmentId: "{{ appointmentId }}"
+            ratedByUserId: "{{ userId }}"
+            ratedToUserId: "{{ ratedToUserId }}"
+            rating: 5
+            comment: "stress-test-score"
+          afterResponse: "trackResponse"

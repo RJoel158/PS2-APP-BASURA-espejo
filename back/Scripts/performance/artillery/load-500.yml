@@ -1,0 +1,102 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "warmup"
+    - duration: 180
+      arrivalRate: 50
+      rampTo: 120
+      name: "ramp"
+    - duration: 300
+      arrivalRate: 120
+      name: "steady"
+  processor: "./processor.cjs"
+  payload:
+    path: "./users.sample.csv"
+    fields:
+      - "email"
+      - "password"
+      - "userId"
+      - "role"
+      - "appointmentId"
+      - "ratedToUserId"
+      - "clientIp"
+    order: random
+scenarios:
+  - name: "authenticated-core-flow"
+    weight: 70
+    flow:
+      - post:
+          url: "/api/users/login"
+          headers:
+            x-forwarded-for: "{{ clientIp }}"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.user.token"
+              as: "accessToken"
+          afterResponse: "captureAuthFromBody"
+      - function: "ensureUserId"
+      - get:
+          url: "/api/request"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/appointments/recycler/{{ userId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/score/user/{{ userId }}/total"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/notifications/user/{{ userId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/ranking/periods/active-or-last"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+  - name: "admin-report-pressure"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/users/login"
+          headers:
+            x-forwarded-for: "{{ clientIp }}"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.user.token"
+              as: "accessToken"
+          afterResponse: "captureAuthFromBody"
+      - get:
+          url: "/api/reports/materiales"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/reports/scores"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+      - get:
+          url: "/api/reports/recolecciones"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          afterResponse: "trackResponse"
+  - name: "ranking-read-hotspot"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/ranking/periods/active-or-last"
+          afterResponse: "trackResponse"

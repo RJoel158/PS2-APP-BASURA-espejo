@@ -4,6 +4,16 @@ const buckets = new Map();
 
 const now = () => Date.now();
 
+const envInt = (name, fallback) => {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+};
+
+const envRatePerSecond = (name, fallback) => {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+
 const getClientIp = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length > 0) {
@@ -84,9 +94,9 @@ export const createTokenBucketLimiter = ({
 
 export const loginRateLimiter = createTokenBucketLimiter({
   name: 'login',
-  capacity: 8,
-  refillPerSecond: 8 / 60,
-  blockDurationMs: 5 * 60 * 1000,
+  capacity: envInt('RL_LOGIN_CAPACITY', 8),
+  refillPerSecond: envRatePerSecond('RL_LOGIN_REFILL_PER_SECOND', 8 / 60),
+  blockDurationMs: envInt('RL_LOGIN_BLOCK_MS', 5 * 60 * 1000),
   keyGenerator: (req) => {
     const email = String(req.body?.email || '').toLowerCase().trim();
     const ip = getClientIp(req);
@@ -96,9 +106,9 @@ export const loginRateLimiter = createTokenBucketLimiter({
 
 export const forgotPasswordRateLimiter = createTokenBucketLimiter({
   name: 'forgot-password',
-  capacity: 5,
-  refillPerSecond: 5 / 60,
-  blockDurationMs: 10 * 60 * 1000,
+  capacity: envInt('RL_FORGOT_CAPACITY', 5),
+  refillPerSecond: envRatePerSecond('RL_FORGOT_REFILL_PER_SECOND', 5 / 60),
+  blockDurationMs: envInt('RL_FORGOT_BLOCK_MS', 10 * 60 * 1000),
   keyGenerator: (req) => {
     const email = String(req.body?.email || '').toLowerCase().trim();
     const ip = getClientIp(req);
@@ -108,8 +118,8 @@ export const forgotPasswordRateLimiter = createTokenBucketLimiter({
 
 export const checkEmailRateLimiter = createTokenBucketLimiter({
   name: 'check-email',
-  capacity: 20,
-  refillPerSecond: 20 / 60,
-  blockDurationMs: 2 * 60 * 1000,
+  capacity: envInt('RL_CHECK_EMAIL_CAPACITY', 20),
+  refillPerSecond: envRatePerSecond('RL_CHECK_EMAIL_REFILL_PER_SECOND', 20 / 60),
+  blockDurationMs: envInt('RL_CHECK_EMAIL_BLOCK_MS', 2 * 60 * 1000),
   keyGenerator: (req) => getClientIp(req)
 });
