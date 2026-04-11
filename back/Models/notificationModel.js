@@ -1,5 +1,6 @@
 // Models/notificationModel.js
 import db from '../config/DBConnect.js';
+import { invalidateByPrefix } from '../shared/responseCache.js';
 
 /**
  * Crear una nueva notificación
@@ -38,6 +39,8 @@ export const createNotification = async (userId, title, body, type, entityId, re
         createdAt
       ) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())
     `, [userId, type, title, body, finalRequestId, finalAppointmentId]);
+
+    invalidateByPrefix(`notifications:user:${userId}:`);
 
     console.log(`[INFO] Notification created for user ${userId}: ${title} (type: ${type}, requestId: ${finalRequestId}, appointmentId: ${finalAppointmentId})`);
     return result.insertId;
@@ -105,6 +108,10 @@ export const markAsRead = async (notificationId, userId) => {
       SET \`read\` = 1, readAt = NOW() 
       WHERE id = ? AND userId = ?
     `, [notificationId, userId]);
+
+    if (result.affectedRows > 0) {
+      invalidateByPrefix(`notifications:user:${userId}:`);
+    }
 
     return result.affectedRows > 0;
   } catch (error) {

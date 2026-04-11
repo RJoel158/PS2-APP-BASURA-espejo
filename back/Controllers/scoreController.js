@@ -1,5 +1,8 @@
 import * as ScoreModel from '../Models/scoreModel.js';
 import { APPOINTMENT_STATE, SCORE_CONSTANTS, isValidRating } from '../shared/constants.js';
+import { getOrSetCached, invalidateByPrefix } from '../shared/responseCache.js';
+
+const SCORE_CACHE_TTL_MS = Number(process.env.CACHE_TTL_SCORE_MS || 20000);
 
 /**
  * Crear una calificación
@@ -74,6 +77,8 @@ export const createScore = async (req, res) => {
           await ScoreModel.updateScoreRating(appointmentId, ratedByUserId, rating, comment);
         }
 
+        invalidateByPrefix(`score:user:${ratedToUserId}:`);
+
         return res.status(200).json({
           success: true,
           message: 'Calificación actualizada exitosamente',
@@ -104,6 +109,8 @@ export const createScore = async (req, res) => {
         comment || null
       );
     }
+
+    invalidateByPrefix(`score:user:${ratedToUserId}:`);
 
     res.status(201).json({
       success: true,
@@ -179,7 +186,12 @@ export const getUserTotalScore = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const totalScore = await ScoreModel.getUserTotalScore(userId);
+    const cacheKey = `score:user:${userId}:total`;
+    const totalScore = await getOrSetCached(
+      cacheKey,
+      async () => ScoreModel.getUserTotalScore(userId),
+      SCORE_CACHE_TTL_MS
+    );
 
     res.json({
       success: true,
@@ -205,7 +217,12 @@ export const getUserAverageRating = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const rating = await ScoreModel.getUserAverageRating(userId);
+    const cacheKey = `score:user:${userId}:average`;
+    const rating = await getOrSetCached(
+      cacheKey,
+      async () => ScoreModel.getUserAverageRating(userId),
+      SCORE_CACHE_TTL_MS
+    );
 
     res.json({
       success: true,

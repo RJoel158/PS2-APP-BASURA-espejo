@@ -1,32 +1,52 @@
 # Plan de Escalamiento Seguro (Municipal)
 
 ## Objetivo
+
 Aumentar la capacidad de usuarios concurrentes y reducir latencia sin romper la logica actual de negocio ni contratos de API consumidos por el frontend.
 
+## Estado Actual
+
+- Fase 1: COMPLETADA (readiness + smoke diario + umbrales operativos activos)
+- Fase 2: COMPLETADA (cache corto en ranking/reportes/score/notificaciones + limites seguros en listados)
+- Fase 3: COMPLETADA (optimizacion del flujo de login; smoke con p95 <= 500 ms)
+- Fase 4: PENDIENTE
+
 ## Principios
+
 - No cambiar estructura de respuestas JSON existentes sin versionado.
 - Mantener calculos de score/ranking en backend.
 - Mantener soft-delete y filtros de estado en consultas.
 - Cambios incrementales con rollback facil.
 
 ## KPI de referencia (SLA)
+
 - p95 de endpoints criticos <= 500 ms.
 - tasa de error global <= 1%.
 - 429 en login <= 2% en picos esperados.
 - 0 regresiones funcionales en flujo: login -> request -> appointment -> notifications -> ranking.
 
 ## Fase 1 - Estabilizacion (1-2 dias)
+
 1. Afinar variables operativas por entorno.
 2. Activar monitoreo de /health/ready cada 30s.
 3. Definir umbrales de alerta: p95, errores 5xx, timeouts, saturacion de pool DB.
 4. Ejecutar smoke diario con credenciales reales de prueba (no de produccion).
 
 Entregables:
+
 - Perfil de entorno documentado.
 - Dashboard minimo de salud.
 - Checklist de despliegue y rollback.
 
+Avance de implementacion:
+
+- Script readiness: `back/Scripts/ops/monitor-readiness.mjs`
+- Script smoke diario: `back/Scripts/ops/smoke-daily-check.mjs`
+- Umbrales: `Doc/ops-alert-thresholds.md`
+- Checklist: `Doc/deploy-rollback-checklist.md`
+
 ## Fase 2 - Reduccion de carga DB (2-4 dias)
+
 1. Agregar cache corto (30-60s) para lecturas calientes:
    - ranking periodos activos
    - reportes agregados de panel
@@ -34,28 +54,34 @@ Entregables:
 3. Revisar consultas lentas con EXPLAIN e indices compuestos.
 
 Entregables:
+
 - p95 de endpoints de lectura reducido al menos 20%.
 - Menor uso de conexiones simultaneas a DB en picos.
 
 ## Fase 3 - Escalado de autenticacion (2-3 dias)
+
 1. Separar claramente trafico de login vs trafico autenticado en pruebas.
 2. Ajustar rate limiter de login por entorno con valores seguros.
 3. Reducir relogin innecesario en cliente usando refresh token correctamente.
 
 Entregables:
+
 - Menor 429 legitimo en login.
 - Menor ETIMEDOUT en picos.
 
 ## Fase 4 - Escalado horizontal controlado (2-3 dias)
+
 1. Ejecutar backend en modo cluster (PM2) en servidor multi-core.
 2. Verificar compatibilidad de sesiones/cookies y socket rooms.
 3. Prueba de carga de regresion con escenario municipal realista.
 
 Entregables:
+
 - Throughput sostenido mayor sin degradar p95.
 - Plan de capacidad por rango de usuarios activos.
 
 ## Matriz de despliegue (Go/No-Go)
+
 - GO:
   - p95 <= 500 ms en smoke y perfil municipal.
   - error rate <= 1% por 30 minutos continuos.
@@ -66,6 +92,7 @@ Entregables:
   - degradacion funcional en endpoints protegidos.
 
 ## Riesgos y mitigacion
+
 1. Riesgo: sobreajuste de rate limiter.
    Mitigacion: cambios graduales y medicion por endpoint.
 2. Riesgo: cache con datos desactualizados.
@@ -74,6 +101,7 @@ Entregables:
    Mitigacion: no cambiar payloads; validar snapshots de respuesta.
 
 ## Siguiente ejecucion recomendada
-1. Aplicar Fase 1 completa.
-2. Medir 48 horas.
-3. Priorizar Fase 2 segun endpoints con peor p95.
+
+1. Ejecutar monitoreo continuo de 48 horas en staging con `ops:monitor:ready` y `ops:smoke:daily`.
+2. Correr `perf:load` para validar estabilidad bajo perfil municipal extendido.
+3. Planificar Fase 4 (cluster/PM2) con prueba de regresion funcional posterior.

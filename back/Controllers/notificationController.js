@@ -1,5 +1,8 @@
 // Controllers/notificationController.js
 import * as NotificationModel from "../Models/notificationModel.js";
+import { getOrSetCached, invalidateByPrefix } from '../shared/responseCache.js';
+
+const NOTIFICATION_CACHE_TTL_MS = Number(process.env.CACHE_TTL_NOTIFICATIONS_MS || 15000);
 
 /**
  * Obtener notificaciones del usuario logueado
@@ -9,7 +12,12 @@ export const getUserNotifications = async (req, res) => {
     const { userId } = req.params;
     const { limit = 20, offset = 0, unreadOnly = false } = req.query;
 
-    console.log("[INFO] getUserNotifications called:", { userId, limit, offset, unreadOnly });
+    const requestedLimit = Number(limit);
+    const requestedOffset = Number(offset);
+    const safeLimit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 20;
+    const safeOffset = Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0;
+
+    console.log("[INFO] getUserNotifications called:", { userId, limit: safeLimit, offset: safeOffset, unreadOnly });
 
     if (!userId || isNaN(parseInt(userId))) {
       return res.status(400).json({
@@ -21,14 +29,26 @@ export const getUserNotifications = async (req, res) => {
     // Convertir unreadOnly a boolean
     const onlyUnread = unreadOnly === 'true' || unreadOnly === true;
 
-    const notifications = await NotificationModel.getUserNotifications(
-      parseInt(userId),
-      parseInt(limit),
-      parseInt(offset),
-      onlyUnread
+    const numericUserId = parseInt(userId);
+    const listCacheKey = `notifications:user:${numericUserId}:list:${safeLimit}:${safeOffset}:${onlyUnread ? 1 : 0}`;
+    const countCacheKey = `notifications:user:${numericUserId}:unread-count`;
+
+    const notifications = await getOrSetCached(
+      listCacheKey,
+      async () => NotificationModel.getUserNotifications(
+        numericUserId,
+        safeLimit,
+        safeOffset,
+        onlyUnread
+      ),
+      NOTIFICATION_CACHE_TTL_MS
     );
 
-    const unreadCount = await NotificationModel.getUnreadCount(parseInt(userId));
+    const unreadCount = await getOrSetCached(
+      countCacheKey,
+      async () => NotificationModel.getUnreadCount(numericUserId),
+      NOTIFICATION_CACHE_TTL_MS
+    );
 
     res.json({
       success: true,
@@ -77,6 +97,8 @@ export const markNotificationAsRead = async (req, res) => {
       });
     }
 
+    invalidateByPrefix(`notifications:user:${parseInt(userId)}:`);
+
     res.json({
       success: true,
       message: "Notificación marcada como leída"
@@ -111,7 +133,13 @@ export const getUnreadCount = async (req, res) => {
       });
     }
 
-    const count = await NotificationModel.getUnreadCount(parseInt(userId));
+    const numericUserId = parseInt(userId);
+    const cacheKey = `notifications:user:${numericUserId}:unread-count`;
+    const count = await getOrSetCached(
+      cacheKey,
+      async () => NotificationModel.getUnreadCount(numericUserId),
+      NOTIFICATION_CACHE_TTL_MS
+    );
 
     res.json({
       success: true,

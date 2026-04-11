@@ -1,6 +1,9 @@
 // Controllers/userController.js
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import * as UserModel from "../Models/userModel.js";
+import * as ScoreModel from "../Models/scoreModel.js";
+import * as NotificationModel from "../Models/notificationModel.js";
 import { sendCredentialsEmail, sendRejectionEmail } from "../Services/emailService.js";
 import { Validator } from "../shared/Validator.js";
 import {
@@ -12,6 +15,83 @@ import {
   verifyRefreshToken
 } from "../shared/auth.js";
 import { isBlacklisted, logSuspiciousActivity } from '../Services/securityLogService.js';
+import { getOrSetCached } from '../shared/responseCache.js';
+
+const LOGIN_USER_CACHE_TTL_MS = Number(process.env.LOGIN_USER_CACHE_TTL_MS || 15000);
+const LOGIN_BCRYPT_CACHE_TTL_MS = Number(process.env.LOGIN_BCRYPT_CACHE_TTL_MS || 15000);
+const LOGIN_CACHE_MAX_ENTRIES = Number(process.env.LOGIN_CACHE_MAX_ENTRIES || 500);
+
+const loginUserCache = new Map();
+const loginPasswordCache = new Map();
+
+const prewarmUserReadCaches = (userId) => {
+  const numericUserId = Number(userId);
+  if (!Number.isInteger(numericUserId) || numericUserId <= 0) return;
+
+  void getOrSetCached(
+    `score:user:${numericUserId}:total`,
+    async () => ScoreModel.getUserTotalScore(numericUserId),
+    Number(process.env.CACHE_TTL_SCORE_MS || 20000)
+  ).catch(() => {});
+
+  void getOrSetCached(
+    `notifications:user:${numericUserId}:list:20:0:0`,
+    async () => NotificationModel.getUserNotifications(numericUserId, 20, 0, false),
+    Number(process.env.CACHE_TTL_NOTIFICATIONS_MS || 15000)
+  ).catch(() => {});
+
+  void getOrSetCached(
+    `notifications:user:${numericUserId}:unread-count`,
+    async () => NotificationModel.getUnreadCount(numericUserId),
+    Number(process.env.CACHE_TTL_NOTIFICATIONS_MS || 15000)
+  ).catch(() => {});
+};
+
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const getCacheValue = (cache, key) => {
+  const item = cache.get(key);
+  if (!item) return null;
+  if (item.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return item.value;
+};
+
+const setCacheValue = (cache, key, value, ttlMs) => {
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + Math.max(1000, Number(ttlMs) || 1000)
+  });
+
+  if (cache.size > LOGIN_CACHE_MAX_ENTRIES) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey) cache.delete(firstKey);
+  }
+};
+
+const getUserForLoginCached = async (email) => {
+  const normalized = normalizeEmail(email);
+  const cacheKey = `user:${normalized}`;
+  const hit = getCacheValue(loginUserCache, cacheKey);
+  if (hit !== null) return hit;
+
+  const user = await UserModel.loginUser(normalized);
+  setCacheValue(loginUserCache, cacheKey, user || null, LOGIN_USER_CACHE_TTL_MS);
+  return user;
+};
+
+const comparePasswordCached = async ({ password, storedPassword, userId }) => {
+  const passDigest = crypto.createHash('sha256').update(String(password)).digest('hex');
+  const cacheKey = `bcrypt:${userId}:${storedPassword}:${passDigest}`;
+  const hit = getCacheValue(loginPasswordCache, cacheKey);
+  if (hit !== null) return Boolean(hit);
+
+  const isValid = await bcrypt.compare(password, storedPassword);
+  setCacheValue(loginPasswordCache, cacheKey, isValid, LOGIN_BCRYPT_CACHE_TTL_MS);
+  return isValid;
+};
 
 /** GET /users */
 export const getUsers = async (req, res) => {
@@ -95,6 +175,7 @@ export const checkEmailExists = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
     const requestIp = req.ip || req.socket?.remoteAddress || null;
 
     // Validar con Validator
@@ -105,26 +186,26 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ success: false, error: Object.values(errors).find(e => e !== "") || "Validación fallida" });
     }
 
-    const blockedByIp = await isBlacklisted({ ip: requestIp });
-    if (blockedByIp) {
-      await logSuspiciousActivity({
-        userId: null,
-        ip: requestIp,
-        eventType: 'blacklisted_ip_login_attempt',
-        details: { email },
-        severity: 'high'
-      });
-      return res.status(403).json({ success: false, error: 'Acceso bloqueado por seguridad' });
-    }
-
-    const user = await UserModel.loginUser(email);
+    const user = await getUserForLoginCached(normalizedEmail);
     if (!user) {
+      const blockedByIp = await isBlacklisted({ ip: requestIp });
+      if (blockedByIp) {
+        await logSuspiciousActivity({
+          userId: null,
+          ip: requestIp,
+          eventType: 'blacklisted_ip_login_attempt',
+          details: { email },
+          severity: 'high'
+        });
+        return res.status(403).json({ success: false, error: 'Acceso bloqueado por seguridad' });
+      }
+
       console.warn("[WARN] loginUser - user not found", { email });
       return res.status(401).json({ success: false, error: "Usuario o contraseña incorrectos" });
     }
 
-    const blockedByUser = await isBlacklisted({ userId: user.id, ip: requestIp });
-    if (blockedByUser) {
+    const blockedBySubject = await isBlacklisted({ userId: user.id, ip: requestIp });
+    if (blockedBySubject) {
       await logSuspiciousActivity({
         userId: user.id,
         ip: requestIp,
@@ -147,7 +228,7 @@ export const loginUser = async (req, res) => {
 
     if (isBcryptHash) {
       console.log("[INFO] Comparing password with bcrypt hash");
-      validPass = await bcrypt.compare(password, storedPassword);
+      validPass = await comparePasswordCached({ password, storedPassword, userId: user.id });
     } else {
       console.warn("[WARN] loginUser - legacy/plain password detected", { email, userId: user.id });
       validPass = password === storedPassword;
@@ -171,6 +252,9 @@ export const loginUser = async (req, res) => {
 
     // Soporte de transicion: cookies seguras + token en payload para clientes legacy.
     setAuthCookies(res, accessToken, refreshToken);
+
+    // Precalienta lecturas que el frontend suele pedir inmediatamente tras login.
+    prewarmUserReadCaches(user.id);
 
     console.log("[INFO] Login successful for", { email });
     res.json({

@@ -1,6 +1,31 @@
 import db from '../config/DBConnect.js';
 
 let warnedMissingTables = false;
+const blacklistDecisionCache = new Map();
+const blacklistDecisionTtlMs = Number(process.env.BLACKLIST_CACHE_TTL_MS || 15000);
+
+const buildBlacklistCacheKey = ({ userId = null, ip = null }) => {
+  const userPart = userId ? `u:${String(userId)}` : 'u:-';
+  const ipPart = ip ? `ip:${String(ip)}` : 'ip:-';
+  return `${userPart}|${ipPart}`;
+};
+
+const getCachedBlacklistDecision = (key) => {
+  const item = blacklistDecisionCache.get(key);
+  if (!item) return null;
+  if (item.expiresAt <= Date.now()) {
+    blacklistDecisionCache.delete(key);
+    return null;
+  }
+  return item.value;
+};
+
+const setCachedBlacklistDecision = (key, value) => {
+  blacklistDecisionCache.set(key, {
+    value: Boolean(value),
+    expiresAt: Date.now() + Math.max(1000, blacklistDecisionTtlMs)
+  });
+};
 
 const warnMissingTables = (error) => {
   if (warnedMissingTables) return;
@@ -246,6 +271,7 @@ export const addBlacklistEntry = async ({
        created_at = CURRENT_TIMESTAMP`,
     [subjectType, subjectValue, isPermanent ? 1 : 0, expiresAt, reason, createdBy]
   );
+  blacklistDecisionCache.clear();
 };
 
 export const getBlacklistEntries = async ({ limit = 100, offset = 0 }) => {
@@ -274,6 +300,7 @@ export const deactivateBlacklistEntry = async ({ id }) => {
      WHERE id = ?`,
     [id]
   );
+  blacklistDecisionCache.clear();
 };
 
 export const isBlacklisted = async ({ userId = null, ip = null }) => {
@@ -292,6 +319,12 @@ export const isBlacklisted = async ({ userId = null, ip = null }) => {
 
   if (subjects.length === 0) return false;
 
+  const cacheKey = buildBlacklistCacheKey({ userId, ip });
+  const cached = getCachedBlacklistDecision(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
   try {
     const [rows] = await db.query(
       `SELECT id
@@ -301,8 +334,9 @@ export const isBlacklisted = async ({ userId = null, ip = null }) => {
        LIMIT 1`,
       params
     );
-
-    return rows.length > 0;
+    const blocked = rows.length > 0;
+    setCachedBlacklistDecision(cacheKey, blocked);
+    return blocked;
   } catch (error) {
     warnMissingTables(error);
     return false;

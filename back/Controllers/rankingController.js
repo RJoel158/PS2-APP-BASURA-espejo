@@ -3,6 +3,7 @@ const deletePeriod = async (req, res) => {
   try {
     const { id } = req.params;
     await RankingPeriod.markDeleted(id);
+    invalidateByPrefix('ranking:');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -14,6 +15,7 @@ const updatePeriod = async (req, res) => {
     const { id } = req.params;
     const { fecha_inicio, fecha_fin } = req.body;
     await RankingPeriod.update(id, { fecha_inicio, fecha_fin });
+    invalidateByPrefix('ranking:');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -33,6 +35,7 @@ const createPeriod = async (req, res) => {
       return res.status(400).json({ success: false, error: 'No se puede crear un periodo con fecha de inicio en el pasado.' });
     }
     await RankingPeriod.create({ fecha_inicio, fecha_fin, estado: 'activo' });
+    invalidateByPrefix('ranking:');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -43,6 +46,9 @@ import RankingHistory from '../Models/rankingHistoryModel.js';
 import RankingTops from '../Models/rankingTopsModel.js';
 import * as AppConfigModel from '../Models/appConfigModel.js';
 import db from '../config/DBConnect.js';
+import { getOrSetCached, invalidateByPrefix } from '../shared/responseCache.js';
+
+const RANKING_CACHE_TTL_MS = Number(process.env.CACHE_TTL_RANKING_MS || 30000);
 
 const parseRankingDecreasePercent = (rawValue, fallback = 10) => {
   let normalized = rawValue;
@@ -65,18 +71,32 @@ const RankingController = {
   // Obtener periodo activo o último cerrado
   getActiveOrLastPeriod: async (req, res) => {
     try {
-      // Buscar periodo activo
-      const [activos] = await db.query("SELECT * FROM ranking_periods WHERE estado = 'activo' ORDER BY fecha_inicio DESC LIMIT 1");
-      if (activos.length > 0) {
-        return res.json(activos[0]);
+      const key = `ranking:active-or-last:${req.originalUrl || '/ranking/periods/active-or-last'}`;
+      const payload = await getOrSetCached(
+        key,
+        async () => {
+          // Buscar periodo activo
+          const [activos] = await db.query("SELECT * FROM ranking_periods WHERE estado = 'activo' ORDER BY fecha_inicio DESC LIMIT 1");
+          if (activos.length > 0) {
+            return { found: true, data: activos[0] };
+          }
+
+          // Si no hay activo, buscar el último cerrado
+          const [cerrados] = await db.query("SELECT * FROM ranking_periods WHERE estado = 'cerrado' ORDER BY fecha_fin DESC LIMIT 1");
+          if (cerrados.length > 0) {
+            return { found: true, data: cerrados[0] };
+          }
+
+          return { found: false, data: null };
+        },
+        RANKING_CACHE_TTL_MS
+      );
+
+      if (!payload.found || !payload.data) {
+        return res.status(404).json({ error: 'No hay periodos registrados.' });
       }
-      // Si no hay activo, buscar el último cerrado
-      const [cerrados] = await db.query("SELECT * FROM ranking_periods WHERE estado = 'cerrado' ORDER BY fecha_fin DESC LIMIT 1");
-      if (cerrados.length > 0) {
-        return res.json(cerrados[0]);
-      }
-      // Si no hay periodos
-      return res.status(404).json({ error: 'No hay periodos registrados.' });
+
+      return res.json(payload.data);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -85,8 +105,12 @@ const RankingController = {
   getLiveRankingByPeriod: async (req, res) => {
     const { periodo_id } = req.params;
     try {
-      // Top 10 recicladores por score agregado (tabla score)
-      const [recicladores] = await db.query(`
+      const key = `ranking:live:${periodo_id}`;
+      const payload = await getOrSetCached(
+        key,
+        async () => {
+          // Top 10 recicladores por score agregado (tabla score)
+          const [recicladores] = await db.query(`
         SELECT
           u.id AS user_id,
           u.email,
@@ -103,8 +127,8 @@ const RankingController = {
         ORDER BY puntaje_final DESC, u.id ASC
         LIMIT 10
       `);
-      // Top 10 recolectores por score agregado (tabla score)
-      const [recolectores] = await db.query(`
+          // Top 10 recolectores por score agregado (tabla score)
+          const [recolectores] = await db.query(`
         SELECT
           u.id AS user_id,
           u.email,
@@ -121,7 +145,12 @@ const RankingController = {
         ORDER BY puntaje_final DESC, u.id ASC
         LIMIT 10
       `);
-      res.json({ success: true, recicladores, recolectores });
+          return { recicladores, recolectores };
+        },
+        RANKING_CACHE_TTL_MS
+      );
+
+      res.json({ success: true, recicladores: payload.recicladores, recolectores: payload.recolectores });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -129,7 +158,15 @@ const RankingController = {
   // Listar todos los periodos (compatibilidad frontend)
   getPeriods: async (req, res) => {
     try {
-      const [periods] = await db.query("SELECT * FROM ranking_periods ORDER BY fecha_inicio DESC");
+      const key = `ranking:periods:${req.originalUrl || '/ranking/periods'}`;
+      const periods = await getOrSetCached(
+        key,
+        async () => {
+          const [rows] = await db.query("SELECT * FROM ranking_periods ORDER BY fecha_inicio DESC");
+          return rows;
+        },
+        RANKING_CACHE_TTL_MS
+      );
       res.json({ success: true, periods });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -139,7 +176,15 @@ const RankingController = {
   // Solo periodos cerrados con fecha de cierre
   getClosedPeriods: async (req, res) => {
     try {
-      const [periods] = await db.query("SELECT id, fecha_fin, estado FROM ranking_periods WHERE estado = 'cerrado' ORDER BY fecha_fin DESC");
+      const key = `ranking:closed:${req.originalUrl || '/ranking/periods/closed'}`;
+      const periods = await getOrSetCached(
+        key,
+        async () => {
+          const [rows] = await db.query("SELECT id, fecha_fin, estado FROM ranking_periods WHERE estado = 'cerrado' ORDER BY fecha_fin DESC");
+          return rows;
+        },
+        RANKING_CACHE_TTL_MS
+      );
       res.json({ success: true, periods });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -150,14 +195,22 @@ const RankingController = {
   getTopsByPeriod: async (req, res) => {
     const { periodo_id } = req.params;
     try {
-      // Consulta el top real del periodo desde ranking_tops
-      const [tops] = await db.query(`
+      const key = `ranking:tops:${periodo_id}`;
+      const tops = await getOrSetCached(
+        key,
+        async () => {
+          // Consulta el top real del periodo desde ranking_tops
+          const [rows] = await db.query(`
         SELECT t.*, u.email
         FROM ranking_tops t
         INNER JOIN users u ON t.user_id = u.id
         WHERE t.periodo_id = ?
         ORDER BY t.rol, t.posicion ASC
       `, [periodo_id]);
+          return rows;
+        },
+        RANKING_CACHE_TTL_MS
+      );
       res.json({ success: true, tops });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -168,7 +221,15 @@ const RankingController = {
   getHistory: async (req, res) => {
     const { periodo_id } = req.params;
     try {
-      const [rows] = await RankingHistory.getByPeriod(periodo_id);
+      const key = `ranking:history:${periodo_id}`;
+      const rows = await getOrSetCached(
+        key,
+        async () => {
+          const [data] = await RankingHistory.getByPeriod(periodo_id);
+          return data;
+        },
+        RANKING_CACHE_TTL_MS
+      );
       res.json({ success: true, history: rows });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -338,6 +399,7 @@ const RankingController = {
           [periodo_id]
         );
         console.log('[RANKING] Periodo cerrado en BD');
+        invalidateByPrefix('ranking:');
 
         await conn.commit();
         res.json({ success: true, ranking: topsPorRol });
@@ -346,6 +408,7 @@ const RankingController = {
           "UPDATE ranking_periods SET estado = 'cerrado', fecha_fin = NOW() WHERE id = ?",
           [periodo_id]
         );
+        invalidateByPrefix('ranking:');
         await conn.commit();
         res.json({ success: false, message: 'No hay puntajes para guardar en el ranking de este periodo.' });
       }

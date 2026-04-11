@@ -1,4 +1,7 @@
 import db from '../config/DBConnect.js';
+import { getOrSetCached } from '../shared/responseCache.js';
+
+const REPORTS_CACHE_TTL_MS = Number(process.env.CACHE_TTL_REPORTS_MS || 30000);
 
 export const getMaterialesReport = async (req, res) => {
   try {
@@ -48,7 +51,15 @@ export const getMaterialesReport = async (req, res) => {
     console.log('[DEBUG] Query SQL:', query);
     console.log('[DEBUG] Params:', params);
 
-    const [rows] = await db.query(query, params);
+    const cacheKey = `reports:materiales:${req.originalUrl || JSON.stringify(req.query || {})}`;
+    const rows = await getOrSetCached(
+      cacheKey,
+      async () => {
+        const [data] = await db.query(query, params);
+        return data;
+      },
+      REPORTS_CACHE_TTL_MS
+    );
     console.log('[INFO] getMaterialesReport - Found', rows.length, 'materials');
     console.log('[DEBUG] Rows:', rows);
 
@@ -122,8 +133,19 @@ export const getScoresReport = async (req, res) => {
     console.log('[DEBUG] queryStats:', queryStats);
     console.log('[DEBUG] queryStats params:', params);
     
-    const [statsRows] = await db.query(queryStats, params);
-    const [detailsRows] = await db.query(queryDetails, params);
+    const cacheKey = `reports:scores:${req.originalUrl || JSON.stringify(req.query || {})}`;
+    const reportData = await getOrSetCached(
+      cacheKey,
+      async () => {
+        const [statsRows] = await db.query(queryStats, params);
+        const [detailsRows] = await db.query(queryDetails, params);
+        return { statsRows, detailsRows };
+      },
+      REPORTS_CACHE_TTL_MS
+    );
+
+    const statsRows = reportData.statsRows;
+    const detailsRows = reportData.detailsRows;
     
     console.log('[INFO] getScoresReport - Found', statsRows.length, 'rating groups');
     console.log('[INFO] getScoresReport - Found', detailsRows.length, 'score details');
@@ -222,7 +244,15 @@ export const getRecolectionsReport = async (req, res) => {
     console.log('[DEBUG] getRecolectionsReport - Query:', query);
     console.log('[DEBUG] getRecolectionsReport - Params:', params);
 
-    const [rows] = await db.query(query, params);
+    const cacheKey = `reports:recollections:${req.originalUrl || JSON.stringify(req.query || {})}`;
+    const rows = await getOrSetCached(
+      cacheKey,
+      async () => {
+        const [data] = await db.query(query, params);
+        return data;
+      },
+      REPORTS_CACHE_TTL_MS
+    );
     console.log('[INFO] getRecolectionsReport - Found', rows.length, 'days with collections');
     console.log('[DEBUG] getRecolectionsReport - Rows:', rows);
 
