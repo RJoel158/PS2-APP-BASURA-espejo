@@ -29,8 +29,10 @@ Ajusta al menos:
 
 ## 2) Build y arranque
 
+Para reutilizar las claves ya definidas en `back/.env` (DB, JWT, Gmail), ejecuta compose con ese archivo:
+
 ```bash
-docker-compose up -d --build
+docker-compose --env-file back/.env up -d --build
 ```
 
 ## 3) Validaciones basicas de produccion
