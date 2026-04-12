@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+Doc
+DB
+Scripts
+test-all-routes.js
+test-routes-report.js
+*.log
+coverage
+

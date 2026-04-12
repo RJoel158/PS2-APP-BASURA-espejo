@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: greenbit-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_greenbit_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-greenbit_v2}
+      MYSQL_USER: ${MYSQL_USER:-greenbit}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-greenbit_pass_2026}
+    ports:
+      - "3306:3306"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./DB/mysql-greenbit_alwaysdata_net.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_greenbit_2026}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: greenbit-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      TRUST_PROXY: 1
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-greenbit}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-greenbit_pass_2026}
+      DB_NAME: ${MYSQL_DATABASE:-greenbit_v2}
+      DB_POOL_CONNECTION_LIMIT: 20
+      DB_POOL_QUEUE_LIMIT: 0
+      JWT_SECRET: ${JWT_SECRET:-change_me_greenbit_jwt_2026}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_greenbit_refresh_2026}
+      JWT_EXPIRES_IN: 24h
+      BCRYPT_SALT_ROUNDS: 12
+      MAX_FILE_SIZE: 10485760
+      UPLOAD_DIR: uploads
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-GreenBit Platform}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@greenbit.com}
+      RL_LOGIN_CAPACITY: 20
+      RL_LOGIN_REFILL_PER_SECOND: 0.33
+      RL_LOGIN_BLOCK_MS: 120000
+      RL_FORGOT_CAPACITY: 8
+      RL_FORGOT_REFILL_PER_SECOND: 0.13
+      RL_FORGOT_BLOCK_MS: 300000
+      RL_CHECK_EMAIL_CAPACITY: 40
+      RL_CHECK_EMAIL_REFILL_PER_SECOND: 0.66
+      RL_CHECK_EMAIL_BLOCK_MS: 120000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: greenbit-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  backend_uploads:
