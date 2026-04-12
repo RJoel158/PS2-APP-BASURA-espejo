@@ -1,9 +1,13 @@
 # GreenBit Recycling Platform - Configuración
 
-# MANUAL TECNICO: 
-   Doc\MANUAL TÉCNICO.docx
+# MANUAL TECNICO:
+
+Doc\MANUAL TÉCNICO.docx
+
 # VIDEO DEMOSTRATIVO
-   https://univalleedu-my.sharepoint.com/:v:/g/personal/svr0035567_est_univalle_edu/IQBX2E_bKcdiQrbrHP_IrKleAQLj2uVC9J3yDCdsG7Xzhfw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=Xu9czw
+
+https://univalleedu-my.sharepoint.com/:v:/g/personal/svr0035567_est_univalle_edu/IQBX2E_bKcdiQrbrHP_IrKleAQLj2uVC9J3yDCdsG7Xzhfw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=Xu9czw
+
 ## 📋 Requisitos Previos
 
 - Node.js 16+
@@ -102,8 +106,6 @@ ENABLE_REQUEST_LOGGING=true
 ```sql
 CREATE DATABASE greenbit_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
-
-
 
 #### Iniciar Servidor Backend
 
@@ -259,18 +261,15 @@ npm run lint        # Verificar código
 ### Problemas Comunes
 
 1. **Error de conexión a BD**
-
    - Verificar que MySQL esté ejecutándose
    - Confirmar credenciales en `.env`
    - Verificar que la base de datos exista
 
 2. **CORS Errors**
-
    - Verificar `CORS_ORIGIN` en backend `.env`
    - Confirmar que URLs coincidan entre frontend y backend
 
 3. **Imágenes no se cargan**
-
    - Verificar permisos de la carpeta `uploads/`
    - Confirmar `UPLOAD_DIRECTORY` en `.env`
    - Verificar configuración de archivos estáticos

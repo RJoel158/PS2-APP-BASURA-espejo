@@ -9,7 +9,7 @@ Aumentar la capacidad de usuarios concurrentes y reducir latencia sin romper la 
 - Fase 1: COMPLETADA (readiness + smoke diario + umbrales operativos activos)
 - Fase 2: COMPLETADA (cache corto en ranking/reportes/score/notificaciones + limites seguros en listados)
 - Fase 3: COMPLETADA (optimizacion del flujo de login; smoke con p95 <= 500 ms)
-- Fase 4: PENDIENTE
+- Fase 4: EN PROGRESO (modo cluster PM2 habilitado, pendiente despliegue canary en entorno objetivo)
 
 ## Principios
 
@@ -127,4 +127,7 @@ No activar Fase 4 si no se cumple ninguna regla por 14 dias de monitoreo continu
 
 1. Ejecutar monitoreo continuo de 48 horas en staging con `ops:monitor:ready` y `ops:smoke:daily`.
 2. Correr `perf:load` para validar estabilidad bajo perfil municipal extendido.
-3. Activar Fase 4 solo si se dispara alguno de los criterios automaticos de este documento.
+3. Ejecutar despliegue Fase 4 por etapas:
+   - `cd back && npm run start:cluster:canary`
+   - validar smoke + flujo funcional
+   - `cd back && npm run start:cluster`
