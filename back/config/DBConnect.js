@@ -30,27 +30,43 @@ console.log(`🔗 Pool de MySQL inicializado para ${process.env.DB_HOST}:${proce
 
 console.log("Pool de MySQL (mysql2) inicializado.");
 
-// Función para verificar la conectividad
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Función para verificar la conectividad con reintentos
 export const checkConnection = async () => {
-  try {
-    const connection = await pool.getConnection();
-    await connection.ping();
-    connection.release();
-    console.log("✅ Conexión a la base de datos verificada");
-    return true;
-  } catch (error) {
-    console.error("❌ Error de conexión a la base de datos:", {
-      code: error.code,
-      message: error.message,
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      database: process.env.DB_NAME
-    });
-    return false;
+  const maxAttempts = 10;
+  const delayMs = 2000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const connection = await pool.getConnection();
+      await connection.ping();
+      connection.release();
+      console.log("✅ Conexión a la base de datos verificada");
+      return true;
+    } catch (error) {
+      console.error("❌ Error de conexión a la base de datos:", {
+        code: error.code,
+        message: error.message,
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        database: process.env.DB_NAME,
+        attempt,
+        maxAttempts
+      });
+
+      if (attempt < maxAttempts) {
+        await sleep(delayMs);
+      }
+    }
   }
+
+  return false;
 };
 
 // Verificar conexión al inicializar
-checkConnection();
+checkConnection().catch((error) => {
+  console.error("❌ Error inesperado verificando la base de datos:", error);
+});
 
 export default pool;
