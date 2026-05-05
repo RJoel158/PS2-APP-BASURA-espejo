@@ -17,6 +17,18 @@ import { checkConnection } from './config/DBConnect.js';
 // Cargar variables de entorno
 dotenv.config();
 
+const normalizeLogLevel = () => String(process.env.LOG_LEVEL || '').trim().toLowerCase();
+const isSilentLogLevel = () => ['silent', 'off', 'none', '0'].includes(normalizeLogLevel());
+
+if (isSilentLogLevel()) {
+  const noop = () => {};
+  console.log = noop;
+  console.info = noop;
+  console.warn = noop;
+  console.error = noop;
+  console.debug = noop;
+}
+
 // Obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

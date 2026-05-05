@@ -7,6 +7,11 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}-refr
 const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
+const isSilentLogLevel = () => {
+  const level = String(process.env.LOG_LEVEL || '').trim().toLowerCase();
+  return ['silent', 'off', 'none', '0'].includes(level);
+};
+
 const isProd = process.env.NODE_ENV === 'production';
 const cookieBaseOptions = {
   httpOnly: true,
@@ -26,7 +31,7 @@ export const cookieOptions = {
   }
 };
 
-if (JWT_SECRET === FALLBACK_JWT_SECRET) {
+if (JWT_SECRET === FALLBACK_JWT_SECRET && !isSilentLogLevel()) {
   console.warn('[SECURITY] JWT secret no configurado. Usando secreto de desarrollo temporal.');
 }
 

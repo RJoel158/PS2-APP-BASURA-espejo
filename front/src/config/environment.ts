@@ -50,6 +50,13 @@ const resolveApiBaseUrl = (): string => {
   return configuredBaseUrl;
 };
 
+const normalizeLogLevel = () => String(import.meta.env.VITE_LOG_LEVEL || '').trim().toLowerCase();
+
+export const isLogSilenced = (): boolean => {
+  const level = normalizeLogLevel();
+  return ['silent', 'off', 'none', '0'].includes(level);
+};
+
 export const config = {
   // Información de la aplicación
   app: {
@@ -107,8 +114,8 @@ export const config = {
 
   // Configuración de desarrollo
   dev: {
-    enableDebugLogs: import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true',
-    showDebugInfo: import.meta.env.VITE_SHOW_DEBUG_INFO === 'true',
+    enableDebugLogs: import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true' && !isLogSilenced(),
+    showDebugInfo: import.meta.env.VITE_SHOW_DEBUG_INFO === 'true' && !isLogSilenced(),
   }
 };
 
