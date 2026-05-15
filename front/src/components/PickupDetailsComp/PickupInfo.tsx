@@ -735,8 +735,25 @@ const PickupInfo: React.FC<PickupInfoProps> = ({ requestId, appointmentId, onCan
       setDeleting(false);
     }
   };
+  const parseLocalDate = (dateString: string) => {
+    if (!dateString) return null;
+
+    const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const normalized = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    const parsedDate = parseLocalDate(dateString);
+    if (!parsedDate) return 'Sin fecha';
+
+    return parsedDate.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
