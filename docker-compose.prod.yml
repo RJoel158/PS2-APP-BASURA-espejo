@@ -30,7 +30,7 @@ services:
     container_name: greenbit-backend
     restart: unless-stopped
     env_file:
-      - ./back/.env.prod
+      - ./back/.env
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -82,7 +82,7 @@ services:
     container_name: greenbit-frontend
     restart: unless-stopped
     env_file:
-      - ./front/.env.prod
+      - ./front/.env
     depends_on:
       backend:
         condition: service_healthy
