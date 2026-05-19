@@ -1,5 +1,9 @@
 GreenBit Recycling Platform
 
+
+Technical Doc: Doc\MANUAL_TECNICO_GREEN_BIT.pdf
+Functionality demonstrative video: https://univalleedu-my.sharepoint.com/:v:/g/personal/smm0034570_est_univalle_edu/IQAFXHTQ4CygSIBwKrIc_Xy9AacoFklxFgKqu_3zDVOTyqE?e=AnhPEl
+
 Overview
 The GreenBit Recycling Platform is a full-stack application built with a Node.js/Express backend and a React/Vite frontend. This repository is prepared for production deployment using Docker Compose.
 
